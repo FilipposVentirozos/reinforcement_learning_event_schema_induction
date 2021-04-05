@@ -1,0 +1,77 @@
+For building RL environment
+	- (Action) BoundedArraySpec, it's np.brodcast
+		- take each minimum and maximum and makes it to a matrix of the given shape (if provided)
+		- OR take the range of minimum and maximum and spread it 
+		- I guess you can represent any 3D environment like that 
+	- (Observation) ArraySpec
+		- are the features length
+	id = number of instances
+	? episode_step = 0  # Episode step, resets every episode
+	state = is the instance
+	step
+		y label is acted as reward to the action (BoundedArraySpec [1,0])
+		then the reward is given based on the observation which are the features
+		
+		
+RL_1 environment
+	- Observation
+		- Is the NE with some features (embedding) like in the IMDB
+	- Action
+		- Is [0,1]
+	- Reward
+	- Replay Buffer
+		- https://towardsdatascience.com/deep-q-network-dqn-ii-b6bf911b6b2c
+			- We can prevent action values from oscillating or diverging catastrophically using a large 
+				buffer of our past experience and sample training data from it, instead of using our latest experience.
+			- The replay buffer contains a collection of experience tuples (S, A, R, S′)
+			- The act of sampling a small batch of tuples from the replay buffer in order to learn is known as experience replay
+		- We do this for every recipe.
+	- id
+		- is a random NE word
+	- We give reward after each episode - a recipe
+	- We give reward after each epoch - all the recipes are processed (LM type)
+	- Balancing Multiple Sources of Reward in Reinforcement Learning (2000)
+		- follow up
+	- DCN+: MIXED OBJECTIVE AND DEEP RESIDUAL COATTENTION FOR QUESTION ANSWERING (2017)
+		- seems similar that it has many QAs
+	- Multi-agent: with sharing "logits"
+	- Do I need batched size
+	- I want rather TF environment rather than Python 
+		- https://www.tensorflow.org/agents/tutorials/2_environments_tutorial#tensorflow_environments
+	- I think this looks similar to what I want
+		- Hierarchical Cooperative Multi-Agent Reinforcement Learning with Skill Discovery (2019)
+			-https://github.com/011235813/hierarchical-marl
+				- TF with no RL library
+	- MARL papers
+		- https://github.com/LantaoYu/MARL-Papers
+	- Algorithm
+		- Take a random seed which has not been seed before and prioritise non tagged NEs
+		- For each random seed:
+			- Take as action observation its neighbour based on normal distribution
+				- The neighbour should not be a previous seed but it can be a previous tagged NE just not an observation that has been already on the same episode
+		- Actions
+			- To include or not (0,1)
+		- Rewards
+			- Penalise when adding a non NE
+			- Penalise and reward episodes that are high or not all convoluted
+			- Penalise by taking into account the number of main verbs of a recipe and that each episode should have the numer of NEs/main verbs
+		- Rewards after many episodes, or epochs
+			- For a certain group of recipes
+				- Concatenate all the events, ordered-lessly
+				- Build an MDP, LM for these events
+				- If in the eval the MDP (LM) perfoms good then reward
+				- We can also penalise if the MDP(LM) performs better in other domains instead of it's own
+		- embeddings
+			- contextualies with the sentence they belong to
+				- or with Dep Tag
+			- with sentence and recipe position
+			- with the word itself - pretrain
+		
+Websites I am viewing:
+https://github.com/tensorflow/agents/blob/master/docs/tutorials/2_environments_tutorial.ipynb
+https://github.com/tensorflow/agents/tree/master/docs/tutorials
+https://github.com/tensorflow/agents/blob/master/docs/tutorials/1_dqn_tutorial.ipynb
+	
+		
+		
+		
