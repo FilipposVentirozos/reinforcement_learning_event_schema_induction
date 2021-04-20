@@ -1,4 +1,4 @@
-For building RL environment
+OveralFor building RL environment
 	- (Action) BoundedArraySpec, it's np.brodcast
 		- take each minimum and maximum and makes it to a matrix of the given shape (if provided)
 		- OR take the range of minimum and maximum and spread it 
@@ -72,6 +72,24 @@ https://github.com/tensorflow/agents/blob/master/docs/tutorials/2_environments_t
 https://github.com/tensorflow/agents/tree/master/docs/tutorials
 https://github.com/tensorflow/agents/blob/master/docs/tutorials/1_dqn_tutorial.ipynb
 	
-		
-		
-		
+General
+https://towardsdatascience.com/the-complete-reinforcement-learning-dictionary-e16230b7d24e
+
+https://ai.stackexchange.com/questions/11350/reinforcement-learning-with-long-term-rewards-and-fixed-states-and-actions
+    Only one non-zero reward per thousand steps - this is referred to as "sparse rewards"
+    I can return zero reward if chosen a simple NE
+    Is called also: temporal credit assignment problem
+        Sequence Modeling of Temporal Credit Assignment for Episodic Reinforcement Learning (2019)
+             (We presented a new algorithm for learning temporal credit assignment, which uses deep neural network (Transformer) to decompose the episodic reward back to each time step in the trajectory)
+            - https://github.com/aadeshnpn/Temporal-Credit-Assignment
+                - Downloaded on Zip
+
+Discount factor gamma
+    - https://stats.stackexchange.com/questions/221402/understanding-the-role-of-the-discount-factor-in-reinforcement-learning
+        - I think I need a higher (closer to one) since I emphasize on future rewards
+
+Experience Replay
+    https://datascience.stackexchange.com/questions/20535/what-is-experience-replay-and-what-are-its-benefits
+        The learning phase is then logically separate from gaining experience, and based on taking random samples from this table.
+        It is harder to use multi-step learning algorithms
+            - Search that

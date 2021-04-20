@@ -32,13 +32,14 @@ class ClassifierEnv(PyEnvironment):
 
         self.X_train = X_train
         self.y_train = y_train
-        self.per_rec = per_rec
-        self.per_rec_counter = 0
-        self.rec_count = 0
+        self.per_rec = per_rec  # The amount of agents to run in a single recipe, but with different starting points
+        self.per_rec_counter = 0  # Counter for the above
+        self.rec_count = 0  # Counter of recipes processed, to establish reward
         self.seed_buffer, self.used_NEs = list(), list()
         # self.imb_ratio = imb_ratio  # Imbalance ratio: 0 < imb_ratio < 1
         # self.id = np.arange(self.X_train.shape[0])  # List of IDs to connect X and y data
         # Sample an id to start with
+        self.search_space = 10  # The number of candidate states
         self.seed = 0
         self.set_seed()
         self.episode_step = 0  # Episode step, resets every episode
@@ -83,17 +84,19 @@ class ClassifierEnv(PyEnvironment):
     def _reset(self):  # ToDo
         """Shuffles data and returns the first state of the shuffled data to begin training on new episode."""
 
-        np.random.shuffle(self.id)  # Shuffle the X and y data
+        # np.random.shuffle(self.id)  # Shuffle the X and y data
         # self.episode_step = 0
 
         # self._episode_ended = False  # Reset terminal condition
         self.per_rec_counter += 1
-        # Check if the number of passes in a recipe have been acheived
+        # Check if the number of passes in a recipe have been achieved
+        # If yes proceed to the new recipe, if not start from a new seed in the current recipe
         if self.per_rec_counter >= self.per_rec:
             self.rec_count += 1  # Next recipe
             self.per_rec_counter = 0
             self.seed_buffer, self.used_NEs = list()
-        self.set_id()
+        # self.set_id()
+        self.set_seed()
         self._state = self.X_train[self.per_rec_counter, self.id, :]
 
         return ts.restart(self._state)
@@ -104,8 +107,8 @@ class ClassifierEnv(PyEnvironment):
         If the action is correct, the environment will either return 1 or `imb_ratio` depending on the current class.
         If the action is incorrect, the environment will either return -1 or -`imb_ratio` depending on the current class.
         """
-        # If the
-        if (self.episode_step % self.per_rec) == 0:
+        # If the ToDO
+        if self.episode_step > self.search_space:  # or used_NEs is all
             # self.episode_step = True
             return self.reset()
         # if self._episode_ended:
@@ -137,3 +140,11 @@ class ClassifierEnv(PyEnvironment):
             return ts.termination(self._state, reward)
         else:
             return ts.transition(self._state, reward)
+
+        # https://github.com/tensorflow/agents/blob/master/docs/tutorials/2_environments_tutorial.ipynb
+        # if self._episode_ended or self._state >= 21:
+        #     reward = self._state - 21 if self._state <= 21 else -21
+        #     return ts.termination(np.array([self._state], dtype=np.int32), reward)
+        # else:
+        #     return ts.transition(
+        #         np.array([self._state], dtype=np.int32), reward=0.0, discount=1.0)
