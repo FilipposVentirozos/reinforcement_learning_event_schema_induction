@@ -55,6 +55,8 @@ RL_1 environment
 			- Penalise when adding a non NE
 			- Penalise and reward episodes that are high or not all convoluted
 			- Penalise by taking into account the number of main verbs of a recipe and that each episode should have the numer of NEs/main verbs
+            - Use vanilla vs pre-train BERT to estimate the correct rewards (based on the paper: Sequence Modeling of Temporal Credit Assignment for Episodic Reinforcement Learning )
+                - For starters set all rewards equally divided by the total and 0 for the Os.
 		- Rewards after many episodes, or epochs
 			- For a certain group of recipes
 				- Concatenate all the events, ordered-lessly
@@ -93,3 +95,37 @@ Experience Replay
         The learning phase is then logically separate from gaining experience, and based on taking random samples from this table.
         It is harder to use multi-step learning algorithms
             - Search that
+    https://towardsdatascience.com/deep-q-network-dqn-ii-b6bf911b6b2c
+        - Replay buffer or Experience buffer
+            - We can prevent action values from oscillating or diverging catastrophically using a large buffer of our past experience and sample training data from it, instead of using our latest experience.
+        - The act of sampling a small batch of tuples from the replay buffer in order to learn is known as experience replay.
+        - the basic idea behind experience replay is to storing past experiences and
+            - then using a random subset of these experiences to update the Q-network,
+                - rather than using just the single most recent experience
+        - Is done using deque
+
+        + Target Network
+            - To make training more stable, there is a trick, called target network, by which we keep a copy of our neural network and use it for the Q(s’, a’) value in the Bellman equation.
+                -  the target network’s parameters are not trained, but they are periodically synchronized with the parameters of the main Q-network
+
+Sequence Modeling of Temporal Credit Assignment for Episodic Reinforcement Learning (2019)
+    - straightforward application of policy gradient methods, including REINFORCE [41], A2C [24] and PPO [32], may suffer from sample inefficiency, as the final episodic reward would only provide the same or similar supervision for learning policy over all time steps in a trajectory.
+    - blackbox optimization approaches , such as cross entropy method [29], CMA-ES [11] and evolution strategies [30], have been also applied to episodic RL problems due to their computational efficiency.
+    - Have a predictor that finds the best distribution of rewards in the action steps by minimising to the episodic reward (or the IntervalS)
+    - What I want is an intermittent TCA since some are non NEs
+
+    Learning Guidance Rewards with Trajectory-space Smoothing (2020)
+        - Cite the above
+        - In contrast with these, our computation of the guidance rewards does not require training auxiliary networks and could be viewed as a simple uniform return decomposition
+        - A favorable property of our approach is that no additional neural networks need to be trained to obtain the guidance rewards, unlike recent works that also examine RL with delayed rewards
+            - Will have https://github.com/tgangwani/GuidanceRewards
+
+    Agent57: Outperforming the Atari Human Benchmark (2020)
+        - Cite the above
+        - Game of skiing seems relevant since it gets -5 after missing gates then receives in the end a final reward
+        - Exploration algorithms in deep RL
+            - NGU (Never Give Up)
+        - Contributions
+            - A new parameterization of the state-action value function that decomposes the contributions of the intrinsic and extrinsic rewards. As a result, we significantly increase the training stability over a large range of intrinsic reward scales.
+            - This allows the agent to control the exploration/exploitation trade-off by dedicating more resources to one or the other.
+
