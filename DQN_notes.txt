@@ -107,6 +107,9 @@ Experience Replay
         + Target Network
             - To make training more stable, there is a trick, called target network, by which we keep a copy of our neural network and use it for the Q(s’, a’) value in the Bellman equation.
                 -  the target network’s parameters are not trained, but they are periodically synchronized with the parameters of the main Q-network
+    https://github.com/tensorflow/agents/blob/master/docs/tutorials/5_replay_buffers_tutorial.ipynb
+        - I think with the Replay Buffer I can run it after defined n steps for the RL to learn.
+            - Which fits my case.
 
 Sequence Modeling of Temporal Credit Assignment for Episodic Reinforcement Learning (2019)
     - straightforward application of policy gradient methods, including REINFORCE [41], A2C [24] and PPO [32], may suffer from sample inefficiency, as the final episodic reward would only provide the same or similar supervision for learning policy over all time steps in a trajectory.
@@ -129,3 +132,71 @@ Sequence Modeling of Temporal Credit Assignment for Episodic Reinforcement Learn
             - A new parameterization of the state-action value function that decomposes the contributions of the intrinsic and extrinsic rewards. As a result, we significantly increase the training stability over a large range of intrinsic reward scales.
             - This allows the agent to control the exploration/exploitation trade-off by dedicating more resources to one or the other.
 
+Policies
+    - https://stackoverflow.com/a/46269757/5455013
+        - Which action should the RL take?
+        - I think in my case, start with random
+
+https://github.com/tensorflow/agents/blob/master/docs/tutorials/4_drivers_tutorial.ipynb
+    - Drivers execute a policy over a specific number of steps or episodes. Should I use that in my task?
+        - Does the RL learn after the driver has been executed? Is the reward given after that?
+
+States could depend on the action taken, in my case it does not depend
+
+Offline RL (https://slideslive.com/38935785/offline-reinforcement-learning-from-algorithms-to-practical-challenges)
+    - good for when to prioritise distributions over good and bad behaviours
+        - For tweaking the policy
+    - Good for when there is alot of data on a subject like self driving cars
+        - Make use of offline data, instead of online
+        - There could be a lot of data show the correct trajectory but the agent cannot test other trajectories
+            - leading to compounding errors
+        - Distribution shift is an issue, see minute 40 for a good example
+    - I think offline RL is not useful here, follow up later
+    - paper resource: https://arxiv.org/pdf/2005.01643.pdf (Offline Reinforcement Learning: Tutorial, Review, and Perspectives on Open Problems)
+
+- Read chpater 5 https://ebookcentral.proquest.com/lib/manchester/reader.action?docID=5439844&ppg=104
+    - TD Learning
+        - approximates current estimate based on previous learned estimates, unlike Monte Carlo
+            - (a.k.a. boostraping)
+        - MC takes the mean return
+        - It is about updating the reward based on the next state
+            - Looks for actions that has the highest reward then it takes that action leading to a new state
+        - I think it does not apply to our case, since whichever action we take it will always land to the same new state.
+        - Sarsa vs Q learning I think differs on exploring options rather than taking the max
+
+Chapter 6 https://ebookcentral.proquest.com/lib/manchester/reader.action?docID=5439844&ppg=104
+    - MAB
+        - Different exploration techniques
+Chapter 8
+    - I think is about the expansions of chapter 5 Q network with more Deep version where the states are convoluted.
+Chapter 9
+    - partially observable Markov Decision Process ( POMDP )
+        - is when we only know part of the world
+    - Uses LSTM to model a state with the previous states
+    - With Attention as well
+    - I could use something similar between each state of words?
+
+Chapter 12 Racing
+    - I think I can use the target network to update the rewards in my case?
+
+
+
+
+Extracting Action Sequences from Texts Based on Deep Reinforcement Learning (2018)
+    - Q-networks to build the Q-functions.
+    - trains two networks one for verbs and one for their args, where the latter uses the input of the first
+    - CNN
+        - design four types of kernels, which correspond to bigram, trigram, four-gram and five-gram, respectively.]
+    https://github.com/Fence/EASDRL/blob/master/Environment.py
+        - elif set rewards
+        - Move to new state
+            - self.state[word_ind, -1] = action + 1
+        - self.state = self.text_vec.copy()
+            - I assume the step just goes to the next word
+
+RL_algos procedure:
+    - Policy
+        - which binary action to take?
+    - Exploration
+        - Sequential, Normal distribution or other?
+    -

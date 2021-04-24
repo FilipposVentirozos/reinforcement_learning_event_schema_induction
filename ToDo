@@ -1,1 +1,9 @@
 - Set reward 0 if non-NE and divide by the total in the end of the Interval for the rest.
+- Search code on other libs on how the deal with the TCA
+- Read chpater 5 https://ebookcentral.proquest.com/lib/manchester/reader.action?docID=5439844&ppg=104
+- How to establish TCA, after how many runs should be random?
+- RL when actions depend on states
+- Read about RL in NLP how the action verbs are taken,
+    - There is no state exploration
+- The different RL algorithms: actor-ctitic, reinforce, ...
+
