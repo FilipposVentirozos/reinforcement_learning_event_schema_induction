@@ -6,4 +6,10 @@
 - Read about RL in NLP how the action verbs are taken,
     - There is no state exploration
 - The different RL algorithms: actor-ctitic, reinforce, ...
-
+AUtoencoders
+RL LM
+https://arxiv.org/pdf/1906.03926.pdf
+On vs Off policy?
+Continuous states
+NER + RL -> more
+survey on RL and approximator functions which is best to use, how to train, which are SOTA to represent the state

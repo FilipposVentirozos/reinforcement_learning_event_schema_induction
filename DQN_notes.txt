@@ -89,6 +89,7 @@ https://ai.stackexchange.com/questions/11350/reinforcement-learning-with-long-te
 Discount factor gamma
     - https://stats.stackexchange.com/questions/221402/understanding-the-role-of-the-discount-factor-in-reinforcement-learning
         - I think I need a higher (closer to one) since I emphasize on future rewards
+        - Or a zero since, the states are not inter-depended
 
 Experience Replay
     https://datascience.stackexchange.com/questions/20535/what-is-experience-replay-and-what-are-its-benefits
@@ -153,6 +154,8 @@ Offline RL (https://slideslive.com/38935785/offline-reinforcement-learning-from-
         - Distribution shift is an issue, see minute 40 for a good example
     - I think offline RL is not useful here, follow up later
     - paper resource: https://arxiv.org/pdf/2005.01643.pdf (Offline Reinforcement Learning: Tutorial, Review, and Perspectives on Open Problems)
+    - https://github.com/tensorflow/agents/issues/405
+    - I think offline RL is similar because the agent cannot choose the new state. But is different because it can choose the action which changes the reward.
 
 - Read chpater 5 https://ebookcentral.proquest.com/lib/manchester/reader.action?docID=5439844&ppg=104
     - TD Learning
@@ -163,6 +166,7 @@ Offline RL (https://slideslive.com/38935785/offline-reinforcement-learning-from-
             - Looks for actions that has the highest reward then it takes that action leading to a new state
         - I think it does not apply to our case, since whichever action we take it will always land to the same new state.
         - Sarsa vs Q learning I think differs on exploring options rather than taking the max
+            - Exactly, the difference between on and off policy. Sarsa takes the future state reward whereas Q learning sets what was the max there.
 
 Chapter 6 https://ebookcentral.proquest.com/lib/manchester/reader.action?docID=5439844&ppg=104
     - MAB
@@ -175,6 +179,10 @@ Chapter 9
     - Uses LSTM to model a state with the previous states
     - With Attention as well
     - I could use something similar between each state of words?
+
+Chapter 10
+    - A3C, many agents which update the global network
+        - Cause of that multi-agent structure no use of replay memory
 
 Chapter 12 Racing
     - I think I can use the target network to update the rewards in my case?
@@ -194,9 +202,32 @@ Extracting Action Sequences from Texts Based on Deep Reinforcement Learning (201
         - self.state = self.text_vec.copy()
             - I assume the step just goes to the next word
 
+I think my case looks like the MAB
+    - https://stats.stackexchange.com/questions/379644/actions-with-no-effect-on-the-enviroment-in-rl
+
 RL_algos procedure:
     - Policy
         - which binary action to take?
     - Exploration
         - Sequential, Normal distribution or other?
     -
+
+Sequence labeling with Reinforcement Learning and Ranking Algorithms (2007)
+    - Order the ones first which our agent is the most certain
+
+Continuous space
+    - https://ai.stackexchange.com/questions/12255/can-q-learning-be-used-for-continuous-state-or-action-spaces
+    - Do I need to encode the embeddings to a sub states or use an Deep learning mapping function
+
+Ensemble NER with Q Network
+    - https://link-springer-com.manchester.idm.oclc.org/chapter/10.1007/978-3-030-29894-4_13
+    - Document-Level Named Entity Recognition with Q-Network
+    - His code is weird
+
+Joint Entity and Relation Extraction with a Hybrid Transformer and Reinforcement Learning Based Model (2020)
+    - Considers one triplet possible per sentence
+    - I think it uses a approximator function for the state, which takes into account different sentence features
+    - I think does not have code
+
+DeNERT-KG: Named Entity and Relation Extraction Model Using DQN, Knowledge Graph, and BERT (2020)
+    - An epoch is when all sequences are labelled in a sentece
