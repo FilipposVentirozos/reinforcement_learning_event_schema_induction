@@ -231,3 +231,46 @@ Joint Entity and Relation Extraction with a Hybrid Transformer and Reinforcement
 
 DeNERT-KG: Named Entity and Relation Extraction Model Using DQN, Knowledge Graph, and BERT (2020)
     - An epoch is when all sequences are labelled in a sentece
+
+
+Deep Reinforcement Learning with a Natural Language Action Space (2016)
+    - DRRN function approximator
+        - to train
+            - Uses experience replay
+                -  compute the temporal difference error for sample k
+            - Can my sentence embeddings algo help to converge the space
+        - It's about text based RPG games
+
+Distantly Supervised NER with Partial Annotation Learning and Reinforcement Learning (2018)
+    - Selecting clean instances for the NER, not very clear, maybe revisit later
+        - https://github.com/rainarch/DSNER
+
+NATURAL LANGUAGE STATE REPRESENTATION FOR REINFORCEMENT LEARNING (2019 ICLR)
+    - good to cite, it seems that language is better for RL cause is more concise
+        - was rejected
+
+Learn How to Cook a New Recipe in a New House: Using Map Familiarization, Curriculum Learning, and Bandit Feedback to Learn Families of Text-Based Adventure Games (2020)
+    - it's a game setting
+        - maybe revisit later
+
+Delayed rewards
+    - https://github.com/tensorflow/agents/issues/529
+
+In Conversational AI
+    - The state is constructed from the information the last User action as well as the last Agent action.
+
+RL tutorial
+    https://github.com/omerbsezer/Reinforcement_learning_tutorial_with_demo#FunctionApproximation
+
+
+Curriculum Learning
+    - Is an interesting section when learning the cooking actions
+
+https://medium.com/swlh/states-observation-and-action-spaces-in-reinforcement-learning-569a30a8d2a1
+    -  For example the DDPG algorithm can only be applied to environments with continuous action space, while the PPO algorithm can be used for environments with either discrete or continuous action spaces.
+    - I try an agent for continuous envs
+
+https://github.com/ConvLab/ConvLab/
+
+Some DRL for Dialogues just add the word embeddings together for the states, plus concatenate the previous state
+    - https://github.com/KGSands/DRL-Chatbot/blob/master/chatbot.py
