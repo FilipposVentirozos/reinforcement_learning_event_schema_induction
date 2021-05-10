@@ -1,10 +1,15 @@
 import numpy as np
+import tensorflow as tf
+from tf_agents.specs import tensor_spec
 from tf_agents.environments.py_environment import PyEnvironment
 from tf_agents.specs.array_spec import ArraySpec, BoundedArraySpec
 from tf_agents.trajectories import time_step as ts
+from tf_agents.replay_buffers import py_uniform_replay_buffer
+from tf_agents.drivers import py_driver
 
 
-class ClassifierEnv(PyEnvironment):
+
+class SequenceTaggerEnv(PyEnvironment):
     """
     Custom `PyEnvironment` environment for imbalanced classification.
     Based on https://www.tensorflow.org/agents/tutorials/2_environments_tutorial
@@ -46,6 +51,17 @@ class ClassifierEnv(PyEnvironment):
         # Each episode is a recipe (1 of 50)
         self._state = self.X_train[self.per_rec_counter, self.seed, :]
 
+        # # Replay buffer, to store variables and train accordingly
+        # batch_size = 32
+        # replay_buffer_capacity = 1000 * batch_size
+        # buffer_unit = (tf.TensorSpec([1], tf.bool, 'action'),  # Binary is 0 or 1
+        #                (tf.TensorSpec([5], tf.float32, 'lidar'),
+        #                 # ToDo set the NEs values instead, add index info as well, reward?
+        #                 tf.TensorSpec([3, 2], tf.float32, 'camera')))
+        # py_replay_buffer = py_uniform_replay_buffer.PyUniformReplayBuffer(
+        #     capacity=replay_buffer_capacity,
+        #     data_spec=tensor_spec.to_nest_array_spec(buffer_unit))
+
     def action_spec(self):
         """
         Definition of the discrete actionspace.
@@ -79,7 +95,6 @@ class ClassifierEnv(PyEnvironment):
             new_id = round(np.random.normal(self.seed, sigma, 1)[0])
             if new_id in self.seed_buffer:
                 continue
-
 
     def _reset(self):  # ToDo
         """Shuffles data and returns the first state of the shuffled data to begin training on new episode."""

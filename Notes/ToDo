@@ -14,3 +14,5 @@ Continuous states
 NER + RL -> more
 survey on RL and approximator functions which is best to use, how to train, which are SOTA to represent the state
 check Gmail (done)
+- https://github.com/rmsander/marl_ppo/blob/main/ppo/utils.py
+    - Can run and see if it works

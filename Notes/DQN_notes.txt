@@ -265,6 +265,9 @@ RL tutorial
 
 Curriculum Learning
     - Is an interesting section when learning the cooking actions
+    - Curriculum Learning for Reinforcement Learning Domains: A Framework and Survey
+        - Is about having a teacher and learning the best sequence of actions
+
 
 https://medium.com/swlh/states-observation-and-action-spaces-in-reinforcement-learning-569a30a8d2a1
     -  For example the DDPG algorithm can only be applied to environments with continuous action space, while the PPO algorithm can be used for environments with either discrete or continuous action spaces.
@@ -274,3 +277,6 @@ https://github.com/ConvLab/ConvLab/
 
 Some DRL for Dialogues just add the word embeddings together for the states, plus concatenate the previous state
     - https://github.com/KGSands/DRL-Chatbot/blob/master/chatbot.py
+
+PPO agent contructor
+    - https://github.com/rmsander/marl_ppo/blob/main/ppo/utils.py
