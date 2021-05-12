@@ -1,10 +1,12 @@
-import numpy as np
-from tf_agents.trajectories import trajectory
 import tensorflow as tf
-from tf_agents.specs import tensor_spec
 from tf_agents.replay_buffers import py_uniform_replay_buffer
-import embeddings, policy, sequence_tagger_env
+from tf_agents.specs import tensor_spec
+from tf_agents.trajectories import trajectory
 
+# Local
+import embeddings
+import policy
+import sequence_tagger_env
 
 # Hyper-Parameters
 num_iterations = 20000  # @param {type:"integer"}
@@ -20,6 +22,15 @@ log_interval = 200  # @param {type:"integer"}
 num_eval_episodes = 10  # @param {type:"integer"}
 eval_interval = 1000  # @param {type:"integer"}
 
+# Domain Specific Hyper-Parameters
+
+# Can be an integer or a lambda function. If lambda function then is the number of verbs of a recipe +/- the function
+# agents_per_recipe = lambda x: x + 1
+agents_per_recipe = 5
+# The interval is when the trajectory ends and the rewards are calculated
+# Is an integer denoting how many recipes, or could be a signal from the data
+interval = 25
+
 
 # Get the Data
 data = embeddings.ToyData()
@@ -28,12 +39,12 @@ data = embeddings.ToyData()
 env = sequence_tagger_env.SequenceTaggerEnv(data.X_train, data.y_train)
 
 # Initialise the Policy
-policy_ = policy.Policy(env.action_spec())
+policy_ = policy.Policy(env.action_spec(), policy="random")
 
 # Replay buffer
 # Replay buffer, to store variables and train accordingly
 batch_size = 32
-replay_buffer_capacity = 1000 * batch_size
+replay_buffer_capacity = 10_000 * batch_size
 buffer_unit = (tf.TensorSpec([1], tf.bool, 'action'),  # Binary is 0 or 1
                (tf.TensorSpec([5], tf.float32, 'lidar'),
                 # ToDo set the NEs values instead, add index info as well, reward?

@@ -31,11 +31,12 @@ class SequenceTaggerEnv(PyEnvironment, ABC):
         :rtype: NoneType
 
         """
-        # Action is 0, 1  to whether take into account an NE or not
+        # Action is 0, 1  to whether take into account an NE or not, ToDo check if bool safe
         self._action_spec = BoundedArraySpec(shape=(), dtype=y_train.dtype, minimum=0, maximum=1, name="action")
-        # Observation is the embedding of the NE,
+        # Observation is the embedding of the NE, which is between 0 and 1
         # self._observation_spec = ArraySpec(shape=X_train.shape[0, 0, :], dtype=X_train.dtype, name="observation")
-        self._observation_spec = BoundedArraySpec(shape=X_train.shape[0, 0, :], minimum=0, maximum=1, dtype=X_train.dtype, name="observation")
+        self._observation_spec = BoundedArraySpec(shape=X_train[0, 0, :].shape, minimum=0, maximum=1,
+                                                  dtype=X_train.dtype, name="observation")
         self._episode_ended = False
 
         self.X_train = X_train
@@ -136,18 +137,11 @@ class SequenceTaggerEnv(PyEnvironment, ABC):
         env_action = self.y_train[self.id[self.episode_step]]  # The label of the current state
         self.episode_step += 1
 
-        if action == env_action:  # Correct action
-            if env_action:  # Minority
-                reward = 1  # True Positive
-            else:  # Majority
-                reward = self.imb_ratio  # True Negative
-
-        else:  # Incorrect action
-            if env_action:  # Minority
-                reward = -1  # False Negative
-                self._episode_ended = True  # Stop episode when minority class is misclassified
-            else:  # Majority
-                reward = -self.imb_ratio  # False Positive
+        # Not an NE Reward
+        if action == env_action:
+            reward = 50
+        else:
+            reward = -50
 
         if self.episode_step == self.X_train.shape[0] - 1:  # If last step in data
             self._episode_ended = True
@@ -166,3 +160,6 @@ class SequenceTaggerEnv(PyEnvironment, ABC):
         # else:
         #     return ts.transition(
         #         np.array([self._state], dtype=np.int32), reward=0.0, discount=1.0)
+
+    def retro_rewards(self, trajectory):
+        return None

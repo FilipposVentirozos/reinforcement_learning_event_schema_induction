@@ -1,7 +1,6 @@
 # from tf_agents.policies import gaussian_policy  # Is intended for integer range Actions, not suitable for binomial
 from tf_agents.policies import random_py_policy
 
-
 class Policy:
 
     def __init__(self, action_spec, *, policy="random"):
