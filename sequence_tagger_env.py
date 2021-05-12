@@ -1,3 +1,5 @@
+from abc import ABC
+
 import numpy as np
 import tensorflow as tf
 from tf_agents.specs import tensor_spec
@@ -6,10 +8,10 @@ from tf_agents.specs.array_spec import ArraySpec, BoundedArraySpec
 from tf_agents.trajectories import time_step as ts
 from tf_agents.replay_buffers import py_uniform_replay_buffer
 from tf_agents.drivers import py_driver
+from embeddings import ToyData
 
 
-
-class SequenceTaggerEnv(PyEnvironment):
+class SequenceTaggerEnv(PyEnvironment, ABC):
     """
     Custom `PyEnvironment` environment for imbalanced classification.
     Based on https://www.tensorflow.org/agents/tutorials/2_environments_tutorial
@@ -30,9 +32,10 @@ class SequenceTaggerEnv(PyEnvironment):
 
         """
         # Action is 0, 1  to whether take into account an NE or not
-        self._action_spec = BoundedArraySpec(shape=(), dtype=np.int32, minimum=0, maximum=1, name="action")
+        self._action_spec = BoundedArraySpec(shape=(), dtype=y_train.dtype, minimum=0, maximum=1, name="action")
         # Observation is the embedding of the NE,
-        self._observation_spec = ArraySpec(shape=X_train.shape[0, 0, :], dtype=X_train.dtype, name="observation")
+        # self._observation_spec = ArraySpec(shape=X_train.shape[0, 0, :], dtype=X_train.dtype, name="observation")
+        self._observation_spec = BoundedArraySpec(shape=X_train.shape[0, 0, :], minimum=0, maximum=1, dtype=X_train.dtype, name="observation")
         self._episode_ended = False
 
         self.X_train = X_train

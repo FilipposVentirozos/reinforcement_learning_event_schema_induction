@@ -1,22 +1,13 @@
 import numpy as np
 from tf_agents.trajectories import trajectory
-from sequence_tagger_env import SequenceTaggerEnv
 import tensorflow as tf
 from tf_agents.specs import tensor_spec
 from tf_agents.replay_buffers import py_uniform_replay_buffer
-
-# Toy Data
-# Data representing the NEs data. Where 0 are the Non NEs, and 1,2,3 are the different type of NEs.
-# We consider 50 different recipes where each of one has 30 tokens.
-y_train = np.random.randint(4, size=(50, 30))
-# We hypothesize a vector of 100 length
-X_train = np.random.uniform(low=0, high=1, size=(50, 30, 100))
-print(y_train[0, ])
-print(X_train[0, ])
+import embeddings, policy, sequence_tagger_env
 
 
 # Hyper-Parameters
-num_iterations = 20000 # @param {type:"integer"}
+num_iterations = 20000  # @param {type:"integer"}
 
 initial_collect_steps = 100  # @param {type:"integer"}
 collect_steps_per_iteration = 1  # @param {type:"integer"}
@@ -29,6 +20,15 @@ log_interval = 200  # @param {type:"integer"}
 num_eval_episodes = 10  # @param {type:"integer"}
 eval_interval = 1000  # @param {type:"integer"}
 
+
+# Get the Data
+data = embeddings.ToyData()
+
+# Environment
+env = sequence_tagger_env.SequenceTaggerEnv(data.X_train, data.y_train)
+
+# Initialise the Policy
+policy_ = policy.Policy(env.action_spec())
 
 # Replay buffer
 # Replay buffer, to store variables and train accordingly
@@ -45,19 +45,19 @@ py_replay_buffer = py_uniform_replay_buffer.PyUniformReplayBuffer(
 # Data Collection
 # @test {"skip": true}
 def collect_step(environment, policy, buffer):
-  time_step = environment.current_time_step()
-  action_step = policy.action(time_step)
-  next_time_step = environment.step(action_step.action)
-  traj = trajectory.from_transition(time_step, action_step, next_time_step)
+    time_step = environment.current_time_step()
+    action_step = policy.action(time_step)
+    next_time_step = environment.step(action_step.action)
+    traj = trajectory.from_transition(time_step, action_step, next_time_step)
 
-  # Add trajectory to the replay buffer
-  buffer.add_batch(traj)
+    # Add trajectory to the replay buffer
+    buffer.add_batch(traj)
 
 def collect_data(env, policy, buffer, steps):
-  for _ in range(steps):
-    collect_step(env, policy, buffer)
+    for _ in range(steps):
+        collect_step(env, policy, buffer)
 
-collect_data(SequenceTaggerEnv, random_policy, replay_buffer, initial_collect_steps)
+collect_data(sequence_tagger_env.SequenceTaggerEnv, random_policy, replay_buffer, initial_collect_steps)
 
 
 
