@@ -163,3 +163,7 @@ class SequenceTaggerEnv(PyEnvironment, ABC):
 
     def retro_rewards(self, trajectory):
         return None
+
+    def recipe_number_of_events_estimate(self):
+        """Call when starting a new recipe"""
+        pass

@@ -1,0 +1,34 @@
+Find sequence Autoencoder code
+
+An Introduction to Variational Autoencoders (2019)
+    - https://arxiv.org/pdf/1906.02691.pdf
+    - TF example
+        - https://www.tensorflow.org/tutorials/generative/cvae
+
+    Jacobian Matrix
+        - https://www.khanacademy.org/math/multivariable-calculus/multivariable-derivatives/jacobian/v/the-jacobian-matrix
+            - the matrix which shows the transformation of the input/output
+
+    - Interesting to use
+        - https://arxiv.org/pdf/2011.01136.pdf
+            - Improving Variational Autoencoder for Text Modelling with Timestep-Wise Regularisation (2020)
+
+    - Survey of LMs
+        - https://arxiv.org/abs/1906.03591
+            - It does not have VAE
+
+      Read it:
+        https://www.sciencedirect.com/science/article/pii/S1319157820303360
+            - The recent exciting advancement was proposed by Guu et al. (2018) where instead of Gaussian distribution, Von Mises-Fisher distribution (Yasutomi and Tanaka, 2014 is used
+       Resource
+
+        http://cs229.stanford.edu/syllabus.html
+
+How to concatenate?
+    - Per Lexical Units, similar to the Hierarchical ... (2018) which uses verb, object, ...
+        - I was thinking to have orthogonal axis for each NE type
+        - How to concatenate with multiple types of one type? (like many ingredients)
+            -
+    - Use Hypernyms
+        - Choose the level with exploratory analysis
+            - not too much, not too little

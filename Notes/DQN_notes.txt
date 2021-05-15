@@ -280,3 +280,39 @@ Some DRL for Dialogues just add the word embeddings together for the states, plu
 
 PPO agent contructor
     - https://github.com/rmsander/marl_ppo/blob/main/ppo/utils.py
+
+Objective
+    - Cluster (same events) words (tokens) from sentences (sequnces)
+
+A non-RL approach
+    - What if we learn to classify relatiions between the NEs, similarly to the SOTA NER, RE
+        - We wouldn't be able to exploit the rewards from our low level penalisations and the event sequence reward
+            - The RL gives us the tool to explore different options guided by the penalites-rewards
+
+Discount Gamma should be big i think. Because we want to have a throughout good path of 0s and 1s
+
+Path, Exploration route
+     Has to be consistent pattern like right left, right + 1, left + 1. So the agent learns the positions. Otherwise, different positions with change of words may cause confusion.
+
+Is it offline RL?
+    If we had a disctionary of words, their embeddings and an NER algo, we could have a proper RL env, where the agent selects which word could go next and then with the NER calculate the reward. Our example is the RL in a car racing env, but we have defined path, the only thing is to find the actions. If only states are bounded is it still offline RL?
+
+The approach is to do the lower penalisation. The train the agent. Apply greedy policy, then evaluate with event sequence. Afterwards, keep checking mostly close to greedy policies in order to not deviate from the lower penalisation rules.
+
+How to set in RL if first state is 0 then terminate episode?
+
+What if we have partial observable MDP. Meaning to know always the first label but then the intermediate to ignore sometimes in order to learn better from context a specific relation but not with the sequence. Search this concept.
+
+I can try the event sequencing with different set of embeddings and concatenations. Then track score for each combination and see how they work.
+
+Relevant applications or fine-tuning word embeddings
+    - Construct events
+        - Have a higher penalisation
+            - ABSA reviews
+                - avail: different products (domain), review stars
+                    - Learn to predict aspect, sentiment pair and their review
+                    - Learn NER from domain shifts
+    - Create Ontologies maybe
+
+Choosing an algorithm
+    - https://intellabs.github.io/coach/selecting_an_algorithm.html

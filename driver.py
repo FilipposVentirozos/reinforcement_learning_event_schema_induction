@@ -86,6 +86,7 @@ class IntervalDriver(driver.Driver, ABC):
             policy_state = action_step.state
         # Calculate posterior rewards
         self.event_sequence_reward()
+
         return time_step, self._interval_number_of_recipes, policy_state
 
     @property
