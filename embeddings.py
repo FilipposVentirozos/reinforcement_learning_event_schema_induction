@@ -13,7 +13,7 @@ class ToyData:
         # print(self.y_train[0, ])
         # print(self.y_train[0, ].shape)
         # print(self.X_train[0, ])
-        # print(self.X_train[0, ].shape)
+        print(self.X_train[0, ].shape)
         # for i in np.nditer(self.X_train):
         # for i in self.X_train:
         #     print(i)

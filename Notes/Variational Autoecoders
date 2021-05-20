@@ -32,3 +32,13 @@ How to concatenate?
     - Use Hypernyms
         - Choose the level with exploratory analysis
             - not too much, not too little
+
+NVAE: A Deep Hierarchical Variational Autoencoder
+    - Has been buzzing
+
+Check how with VAEs I can estimate the sequence of the NEs for an event and also the sequence of events
+    - Is that hierarchical?
+Could I use then multiple trained VAEs to get their reward from each one of them?
+
+The difference I have with HAQAE is that they have a standard range of tuples like 4 <NULL> 4, whereas in my case this is variant
+    - Unless I make it like verb, ingr_group, tool,...

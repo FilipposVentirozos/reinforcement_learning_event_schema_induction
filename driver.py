@@ -1,6 +1,7 @@
 # coding=utf-8
 
-""" The driver is aimed to be instantiate for each patch of similar recipes to calculate the sequences"""
+""" The driver is aimed to be instantiate for each patch of similar recipes to calculate the sequences,
+     it calculates the posterior rewards that are stored in the buffer"""
 
 from __future__ import absolute_import
 from __future__ import division

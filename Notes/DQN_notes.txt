@@ -316,3 +316,38 @@ Relevant applications or fine-tuning word embeddings
 
 Choosing an algorithm
     - https://intellabs.github.io/coach/selecting_an_algorithm.html
+
+Very similar example
+    https://openreview.net/pdf?id=BJlsVZ966m
+
+Embeddings inspiration (to read)
+    - https://www.semanticscholar.org/paper/Joint-Event-Extraction-Model-based-on-Multi-feature-Shuo-Yuan/a70865682a51b09635bc6f927ddd7abf66e8a9c0
+        - Joint Event Extraction Model based on Multi-feature Fusion
+    - https://www.semanticscholar.org/paper/Improving-Event-Detection-using-Contextual-Word-and-Maisonnave-Delbianco/ce6816071fbc8329a7daffabf3efc60284c45533
+        - Improving Event Detection using Contextual Word and Sentence Embeddings
+
+Other papers that seem bit relevant
+    - Enhanced prototypical network for few-shot relation extraction
+    - Entity, Relation, and Event Extraction with Contextualized Span Representations
+        - https://github.com/dwadden/dygiepp
+    - ENPAR:Enhancing Entity and Entity Pair Representations for Joint Entity Relation Extraction
+        - https://github.com/Receiling/ENPAR (is missing)
+        - Is interesting paper, using Ber's MLM, NSP methodology to code entities and their predictions instead
+    - https://www.aaai.org/ocs/index.php/AAAI/AAAI18/paper/view/16257/16125
+        - RL for RE with exogenous data KB
+            - Seet the citations for more similar RL for RE
+
+Inverse RL
+    - when we have the paths from an expert (bees), but we do not have the rewards
+
+Event Extraction with Generative Adversarial Imitation Learning
+    - uses IRL to find the rewards
+    - It does this by using GAIL (Generative Adversarial Imitation Learning)
+
+How to deal with variable action set
+    - In my example some states may be zero and no action is to be taken
+        - https://ai.stackexchange.com/questions/9491/any-papers-regarding-different-inconsistent-action-space-in-reinforcement-learni
+    - Go with that approach for now
+        - Assuming the number of actions is not too big, you can simply ignore actions which don't apply in a given state. That's different from learning - you don't have to learn returning negative award for illegal actions, you simply don't care and select the legal action returning the best award.
+
+
