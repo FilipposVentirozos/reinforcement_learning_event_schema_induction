@@ -351,3 +351,24 @@ How to deal with variable action set
         - Assuming the number of actions is not too big, you can simply ignore actions which don't apply in a given state. That's different from learning - you don't have to learn returning negative award for illegal actions, you simply don't care and select the legal action returning the best award.
 
 
+What if the action is 0, Verb, Ingre, Tool instead of 0,1 in this way the RL learns all the various roles and will use them for event representation
+
+event representation
+    - have a distance between each NE (verb, ingre) of the predicted and target event
+        - Count the distances
+    -  Can use simple Glove Embeddings on the hypernyms
+        - take lemma of each NE
+    - How to combine mulitple NEs of the same type
+        - Use some custom heuristics for starters
+            - the common hypernym, or average of two
+
+Event sequence representation
+    - CRF, RNN
+    - Use GloVe embeddings
+    - encode each unique event to an embedding
+        - Could have the GloVe embeddings as features? (in CRF)
+
+Use HuggingFace embeddings
+Spacy I think does not have it's own pre-trained embeddings
+    https://spacy.io/usage/embeddings-transformers
+        - "Word vectors in spaCy are “static” in the sense that they are not learned parameters of the statistical models, and spaCy itself does not feature any algorithms for learning word vector tables. You can train a word vectors table using tools such as Gensim, FastText or GloVe, or download existing pretrained vectors. "

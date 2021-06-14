@@ -74,7 +74,7 @@ class IntervalDriver(driver.Driver, ABC):
             # Add trajectory to buffer
             self._episode_buffer(traj)
 
-            if traj.is_boundary(): # End of episode
+            if traj.is_boundary():  # End of episode
                 # Apply the NE reward estimate
                 # ToDo Get the number of actions
                 trajs = self._episode_buffer.as_dataset(single_deterministic_pass=True)

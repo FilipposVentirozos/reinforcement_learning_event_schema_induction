@@ -4,7 +4,7 @@ from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import trajectory
 
 # Local
-import embeddings
+from archive import embeddings
 import policy
 import sequence_tagger_env
 

@@ -1,14 +1,9 @@
 from abc import ABC
 
 import numpy as np
-import tensorflow as tf
-from tf_agents.specs import tensor_spec
 from tf_agents.environments.py_environment import PyEnvironment
-from tf_agents.specs.array_spec import ArraySpec, BoundedArraySpec
+from tf_agents.specs.array_spec import BoundedArraySpec
 from tf_agents.trajectories import time_step as ts
-from tf_agents.replay_buffers import py_uniform_replay_buffer
-from tf_agents.drivers import py_driver
-from embeddings import ToyData
 
 
 class EndOfDataSet(Exception):
