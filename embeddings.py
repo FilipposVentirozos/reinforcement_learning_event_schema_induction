@@ -21,8 +21,7 @@ import logging
 logger = logging.getLogger('embeddings')
 logger.addHandler(logging.StreamHandler())
 logger.setLevel(logging.INFO)
-logger.setLevel(logging.DEBUG)
-
+# logger.setLevel(logging.DEBUG)
 
 
 class LostAndFound(Exception):
@@ -31,8 +30,10 @@ class LostAndFound(Exception):
 
 class DataSet:
 
-    def __init__(self,
-                 path: str):
+    def __init__(self):
+        pass
+
+    def create_dataset(self, path_in: str, path_out: str):
         self.nlp = spacy.load("en_core_web_trf")
         # self.nlp = spacy.load("en_core_web_lg")
         # config = {"model": DEFAULT_TOK2VEC_MODEL}
@@ -41,24 +42,24 @@ class DataSet:
         self.ingr_class_dict = dict()
         self.tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
         self.model = AutoModel.from_pretrained("bert-base-uncased", output_hidden_states=True)
-        with open(path, "r") as js:
+        with open(path_in, "r") as js:
             d_ = json.load(js)
         all_ingrs = 0
+        recipes = []
         for recipe in d_:
             doc = self.nlp(recipe["text"])
             ingrs = dict()
             for idx, attr in zip(recipe["spans"], recipe["meta"]["annos"]):
                 ingrs[idx["start"]] = {"end": idx["end"], "span": attr["span"], "attr": attr["anno"]}
             ingr_counter_match = 0
-            target_var, mem = list(), list()
+            x, target_var, mem = list(), list(), list()
             last_target_var, last_token_idx = None, None
             ongoing = False
             for counter, token in enumerate(doc):
                 # logger.debug(token.text)
                 # logger.debug(token.pos_)
                 # Get each word embedding
-                x = self.main_bert_embeddings(doc, counter)
-                print(x.shape)
+                x.append(self.main_bert_embeddings(doc, counter))
                 key = ingrs.get(token.idx, None)
                 if key or ongoing:
                     try:
@@ -101,24 +102,17 @@ class DataSet:
             assert len(ingrs) == ingr_counter_match
             # Check if the target variables is the same with the tokens
             assert len(target_var) == len(doc)
+            assert len(target_var) == len(x)
             doc_pos = [t.pos_ for t in doc]
             print(tabulate.tabulate([list(doc), doc_pos, target_var], tablefmt="github"))
             # logger.debug(doc)
             # logger.debug(target_var)
             # pprint.pprint(self.ingr_class_dict)
             logger.info("___ New recipe ___")
+            recipes.append((x, target_var))
         pprint.pprint(self.ingr_class_dict)
-        self.y_train = np.random.randint(4, size=(50, 30))
-        # We hypothesize a vector of 100 length
-        self.X_train = np.random.uniform(low=0, high=1, size=(50, 30, 100))
-        # print(self.y_train[0, ])
-        # print(self.y_train[0, ].shape)
-        # print(self.X_train[0, ])
-        print(self.X_train[0, ].shape)
-        # for i in np.nditer(self.X_train):
-        # for i in self.X_train:
-        #     print(i)
-        #     print(i.shape)
+        with open(path_out, "w") as js:
+            json.dump(recipes, js, indent=4)
 
     def recipe_iter(self):
         for X, y in zip(self.X_train, self.y_train):
@@ -230,6 +224,8 @@ class DataSet:
 
 
 if __name__ == '__main__':
-    d = DataSet("/home/chroner/PhD_remote/RL_Event_Schema_Induction/data/raw/recipes_0.0.json")
-    for i in d.recipe_iter():
-        print(i)
+    d = DataSet()
+    d.create_dataset("/home/chroner/PhD_remote/RL_Event_Schema_Induction/data/raw/recipes_0_0.json",
+                     "/home/chroner/PhD_remote/RL_Event_Schema_Induction/data/processed/recipes_0_0_proc.json")
+    # for i in d.recipe_iter():
+    #     print(i)
