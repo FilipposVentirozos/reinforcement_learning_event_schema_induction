@@ -224,7 +224,6 @@ class SequenceTaggerEnv(PyEnvironment, ABC):
         """
         self.set_seed_sequential()
 
-
     def _step(self, action: int):
         """
         Take one step in the environment.
