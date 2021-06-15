@@ -1,0 +1,15 @@
+Not detected cooking devices:
+    skillet, colander, fork, paper towel,
+
+Verbs:
+    - conditioned should not be verbs (e.g., browned)
+
+
+Checked some devices and excluded some wrongly setted as devices
+
+Skipping the IOB/2 format for now.
+    - Does using IOB improves accuracy?
+
+In getting the HuggingFace embeddings we have to match to spaCy's
+    Because of tokenisation, spaCy groups larger set of characters and HuggingFace considers only the first set
+    Then to not cause an error we match with the character index to the HuggingFace's token

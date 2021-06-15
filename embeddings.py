@@ -9,12 +9,20 @@ import re
 from collections import defaultdict
 # nltk.download('wordnet')
 import tabulate
+# import tensorflow as tf
+# from transformers import BertTokenizer, TFBertModel
+import numpy as np
+from spacy.pipeline.tok2vec import DEFAULT_TOK2VEC_MODEL
+
+import torch
+from transformers import AutoTokenizer, AutoModel
 import logging
 
 logger = logging.getLogger('embeddings')
 logger.addHandler(logging.StreamHandler())
 logger.setLevel(logging.INFO)
 logger.setLevel(logging.DEBUG)
+
 
 
 class LostAndFound(Exception):
@@ -26,24 +34,31 @@ class DataSet:
     def __init__(self,
                  path: str):
         self.nlp = spacy.load("en_core_web_trf")
+        # self.nlp = spacy.load("en_core_web_lg")
+        # config = {"model": DEFAULT_TOK2VEC_MODEL}
+        # tok2vec = self.nlp.add_pipe("tok2vec")
         self.y = list()
         self.ingr_class_dict = dict()
+        self.tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
+        self.model = AutoModel.from_pretrained("bert-base-uncased", output_hidden_states=True)
         with open(path, "r") as js:
             d_ = json.load(js)
+        all_ingrs = 0
         for recipe in d_:
             doc = self.nlp(recipe["text"])
             ingrs = dict()
             for idx, attr in zip(recipe["spans"], recipe["meta"]["annos"]):
                 ingrs[idx["start"]] = {"end": idx["end"], "span": attr["span"], "attr": attr["anno"]}
             ingr_counter_match = 0
-            target_var = list()
-
-            mem = list()
+            target_var, mem = list(), list()
             last_target_var, last_token_idx = None, None
             ongoing = False
             for counter, token in enumerate(doc):
                 # logger.debug(token.text)
                 # logger.debug(token.pos_)
+                # Get each word embedding
+                x = self.main_bert_embeddings(doc, counter)
+                print(x.shape)
                 key = ingrs.get(token.idx, None)
                 if key or ongoing:
                     try:
@@ -53,40 +68,30 @@ class DataSet:
                             last_target_var = self.extract_ingr(ingrs[token.idx]["attr"])
                             last_token_idx = token.idx
                         mem.append(counter)
-                        # try:
                         if doc[mem[0]:(mem[-1]+1)].text == ingrs[last_token_idx]["span"]:
-                            # for idx in mem:
-                            #     target_var[idx] = last_target_var
                             target_var.append(last_target_var)
                             last_token_idx = None
                             logger.debug("Added: " + doc[mem[0]:(mem[-1]+1)].text)
                             mem = list()
                             ingr_counter_match += 1
+                            all_ingrs += 1
                             ongoing = False
                             continue
                         else:
-                            # mem.append(counter)
                             logger.debug("___Assertion Error___")
                             logger.debug(token.text)
                             # logger.debug(ingrs[token.idx]["span"])
                             target_var.append(last_target_var)
                             ongoing = True
                             continue
-                        # except IndexError:
-                        #     # mem.append(counter)
-                        #     logger.debug("___Assertion Error___")
-                        #     logger.debug(token.text)
-                        #     logger.debug(ingrs[token.idx]["span"])
-                        #     target_var.append(last_target_var)
-                        #     ongoing = True
-                        #     continue
-                    # last_target_var = self.extract_ingr(ingrs[token.idx]["attr"])
+
                     target_var.append(self.extract_ingr(ingrs[token.idx]["attr"]))
                     ingr_counter_match += 1
+                    all_ingrs += 1
                 elif token.pos_ == "VERB":
                     target_var.append("verb")
                 elif token.pos_ == "NOUN":
-                    if self.find_hypernym(token, tag="kitchen appliance"):
+                    if DataSet.find_hypernym(token, tags=["kitchen_appliance", "utensil", "device", "equipment"]):
                         target_var.append("device")
                     else:
                         target_var.append("O")
@@ -100,8 +105,9 @@ class DataSet:
             print(tabulate.tabulate([list(doc), doc_pos, target_var], tablefmt="github"))
             # logger.debug(doc)
             # logger.debug(target_var)
-            pprint.pprint(self.ingr_class_dict)
+            # pprint.pprint(self.ingr_class_dict)
             logger.info("___ New recipe ___")
+        pprint.pprint(self.ingr_class_dict)
         self.y_train = np.random.randint(4, size=(50, 30))
         # We hypothesize a vector of 100 length
         self.X_train = np.random.uniform(low=0, high=1, size=(50, 30, 100))
@@ -137,26 +143,90 @@ class DataSet:
         return self.ingr_class_dict[key]["id"]
 
     @staticmethod
-    def recursive_tag(ss, tag="kitchen appliance"):
+    def recursive_tag(ss, tags: list):
         if ss.hypernyms():
             for hyp in ss.hypernyms():
                 for lemma in hyp.lemmas():
-                    if lemma.name() == tag:
+                    if lemma.name() in tags:
                         raise LostAndFound
-            DataSet.recursive_tag(hyp)
+            DataSet.recursive_tag(hyp, tags)
         else:
             return False
 
-    def find_hypernym(self, token, tag="kitchen appliance"):
+    @staticmethod
+    def find_hypernym(token, tags: list):
         # nltk.download('wordnet')
-        exclusions_food = {"rack", "c", "center", "centre", "broiler", "roast", "medium"}
+        exclusions_food = {"contents", "C", "c", "mixture", "heat", "sprinkle", "pocket", "top", "mouth", "holes",
+                           "bite", "pieces", "edges", "tablespoons", "seconds", "side", "layers", "ounces", "sides",
+                           "broiler", "stem", "cup"}
         if token.lemma_ in exclusions_food:
             return False
         for ss in wn.synsets(token.lemma_):
             try:
-                DataSet.recursive_tag(ss, tag=tag)
+                DataSet.recursive_tag(ss, tags=tags)
             except LostAndFound:
                 return True
+        return False
+
+    @staticmethod
+    def get_BIO(target_var):
+        mem = None
+        for counter, token in enumerate(target_var):
+            if token == mem:
+                pass
+
+    # def get_word_idx(sent: str, word: str):
+    #     return sent.split(" ").index(word)
+
+    @staticmethod
+    def get_hidden_states(encoded, token_ids_word, model, layers):
+        """Push input IDs through model. Stack and sum `layers` (last four by default).
+           Select only those sub-word token outputs that belong to our word of interest
+           and average them."""
+        with torch.no_grad():
+            output = model(**encoded)
+
+        # Get all hidden states
+        states = output.hidden_states
+        # Stack and sum all requested layers
+        output = torch.stack([states[i] for i in layers]).sum(0).squeeze()
+        # Only select the tokens that constitute the requested word
+        word_tokens_output = output[token_ids_word]
+
+        return word_tokens_output.mean(dim=0)
+
+    @staticmethod
+    def get_word_vector(sent, idx, tokenizer, model, layers):
+        """Get a word vector by first tokenizing the input sentence, getting all token idxs
+           that make up the word of interest, and then `get_hidden_states`."""
+        encoded = tokenizer.encode_plus(sent.text, return_tensors="pt")
+        # Check tokenisations match between spaCy and HuggingFace
+        try:
+            assert encoded.char_to_word(sent[idx].idx) == idx
+        except AssertionError:
+            # Assign from character the token that is a match
+            logger.debug(str(idx))
+            idx = encoded.char_to_word(sent[idx].idx)
+            logger.debug(str(idx))
+        # get all token idxs that belong to the word of interest
+        token_ids_word = np.where(np.array(encoded.word_ids()) == idx)
+
+        return DataSet.get_hidden_states(encoded, token_ids_word, model, layers)
+
+    def main_bert_embeddings(self, sent, idx, layers=None):
+        """ Code from
+        https://discuss.huggingface.co/t/generate-raw-word-embeddings-using-transformer-models-like-bert-for-downstream-process/2958
+
+        :param sent:
+        :param idx:
+        :param layers:
+        :return:
+        """
+        # Use last four layers by default
+        layers = [-4, -3, -2, -1] if layers is None else layers
+        word_embedding = DataSet.get_word_vector(sent, idx, self.tokenizer, self.model, layers)
+
+        return word_embedding
 
 
 if __name__ == '__main__':
