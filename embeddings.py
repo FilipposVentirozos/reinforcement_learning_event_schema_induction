@@ -1,4 +1,5 @@
 import pprint
+import sys
 
 import numpy as np
 import json
@@ -121,7 +122,7 @@ class DataSet:
             _label, _ingr_label = DataSet.get_target_int(target_var)
             recipes_label.append(_label)
             recipes_ingr_label.append(_ingr_label)
-            if deubgger_counter == 4:
+            if deubgger_counter == 5:
                 # Save the X
                 # Make an array with all the length equal
                 template_shape = recipes_x[0][0].shape
@@ -153,6 +154,7 @@ class DataSet:
                 np.save(path_out + "_labels_ingrs", np.array(labs))
                 # To load
                 # np.load(path_out + "_labels_ingrs.npy")
+                sys.exit()
         pprint.pprint(self.ingr_class_dict)
         # Transform to numpy array
         print()
