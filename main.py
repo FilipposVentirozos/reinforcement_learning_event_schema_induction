@@ -7,6 +7,8 @@ from tf_agents.trajectories import trajectory
 from archive import embeddings
 import policy
 import sequence_tagger_env
+from dataset import DataSet
+from driver import IntervalDriver
 
 # Hyper-Parameters
 num_iterations = 20000  # @param {type:"integer"}
@@ -32,19 +34,26 @@ agents_per_recipe = 5
 interval = 25
 
 
+
 # Get the Data
-data = embeddings.ToyData()
+dataset_path = "/home/chroner/PhD_remote/RL_Event_Schema_Induction/data/processed/recipes_0_0_proc"
+dat = DataSet()
+dat.fetch_from_path(dataset_path)
 
 # Environment
-env = sequence_tagger_env.SequenceTaggerEnv(data.X_train, data.y_train)
+env = sequence_tagger_env.SequenceTaggerEnv(dat.X, dat.label)
 
 # Initialise the Policy
 policy_ = policy.Policy(env.action_spec(), policy="random")
+
+# Create PPO agent
+
 
 # Replay buffer
 # Replay buffer, to store variables and train accordingly
 batch_size = 32
 replay_buffer_capacity = 10_000 * batch_size
+# Use agent's traj unit for the buffer
 buffer_unit = (tf.TensorSpec([1], tf.bool, 'action'),  # Binary is 0 or 1
                (tf.TensorSpec([5], tf.float32, 'lidar'),
                 # ToDo set the NEs values instead, add index info as well, reward?
@@ -53,22 +62,31 @@ py_replay_buffer = py_uniform_replay_buffer.PyUniformReplayBuffer(
     capacity=replay_buffer_capacity,
     data_spec=tensor_spec.to_nest_array_spec(buffer_unit))
 
-# Data Collection
-# @test {"skip": true}
-def collect_step(environment, policy, buffer):
-    time_step = environment.current_time_step()
-    action_step = policy.action(time_step)
-    next_time_step = environment.step(action_step.action)
-    traj = trajectory.from_transition(time_step, action_step, next_time_step)
+driver = IntervalDriver(env=env, policy=policy_, buffer_observer=py_replay_buffer)
 
-    # Add trajectory to the replay buffer
-    buffer.add_batch(traj)
+for _ in range(num_iterations):
+    driver.run()
+    # loss_info = agent.train(replay_buffer.gather_all())
+    # replay_buffer.clear()
+    # regret_values.append(regret_metric.result())
 
-def collect_data(env, policy, buffer, steps):
-    for _ in range(steps):
-        collect_step(env, policy, buffer)
 
-collect_data(sequence_tagger_env.SequenceTaggerEnv, random_policy, replay_buffer, initial_collect_steps)
+# # Data Collection
+# # @test {"skip": true}
+# def collect_step(environment, policy, buffer):
+#     time_step = environment.current_time_step()
+#     action_step = policy.action(time_step)
+#     next_time_step = environment.step(action_step.action)
+#     traj = trajectory.from_transition(time_step, action_step, next_time_step)
+#
+#     # Add trajectory to the replay buffer
+#     buffer.add_batch(traj)
+#
+# def collect_data(env, policy, buffer, steps):
+#     for _ in range(steps):
+#         collect_step(env, policy, buffer)
+
+# collect_data(sequence_tagger_env.SequenceTaggerEnv, random_policy, replay_buffer, initial_collect_steps)
 
 
 

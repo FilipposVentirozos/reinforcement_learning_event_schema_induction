@@ -17,13 +17,16 @@ import numpy as np
 from spacy.pipeline.tok2vec import DEFAULT_TOK2VEC_MODEL
 
 import torch
-from transformers import AutoTokenizer, AutoModel
+# from transformers import AutoTokenizer, AutoModel
 import logging
 
 logger = logging.getLogger('embeddings')
 logger.addHandler(logging.StreamHandler())
 logger.setLevel(logging.INFO)
 # logger.setLevel(logging.DEBUG)
+import os
+
+# os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 
 
 class LostAndFound(Exception):
@@ -42,6 +45,8 @@ class DataSet:
         # tok2vec = self.nlp.add_pipe("tok2vec")
         self.y = list()
         self.ingr_class_dict = dict()
+        # Included import since having up and invoking the file externally causes segmentation error
+        from transformers import AutoTokenizer, AutoModel
         self.tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
         self.model = AutoModel.from_pretrained("bert-base-uncased", output_hidden_states=True)
         with open(path_in, "r") as js:
@@ -103,8 +108,8 @@ class DataSet:
                         target_var.append("O")
                 else:
                     target_var.append("O")
-            if counter > max_recipe_length:
-                max_recipe_length = counter
+            if counter + 1 > max_recipe_length:
+                max_recipe_length = counter + 1
             # Check if all the ingredients got matched
             assert len(ingrs) == ingr_counter_match
             # Check if the target variables is the same with the tokens
@@ -164,14 +169,24 @@ class DataSet:
         for X, y in zip(self.X_train, self.y_train):
             yield X, y
 
+    def fetch_from_path(self, path: str):
+        """ Provide path and generic filename
+
+        :param path:
+        :return:
+        """
+        self.X = np.load(path + "_x.npy")
+        self.label = np.load(path + "_labels.npy")
+        self.label_ingr = np.load(path + "_labels_ingrs.npy")
+
     def get_X(self):
         return self.X
 
-    def get_y(self):
-        return self.y
+    def get_label(self):
+        return self.label
 
-    def recursive_find_device(self):
-        pass
+    def get_label_ingr(self):
+        return self.label_ingr
 
     def extract_ingr(self, attr: str):
         pattern = re.compile(r'(?<=\[).*?(?=\])', re.UNICODE)
