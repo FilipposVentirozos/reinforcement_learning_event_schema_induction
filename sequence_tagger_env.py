@@ -40,8 +40,9 @@ class SequenceTaggerEnv(PyEnvironment, ABC):
         :rtype: NoneType
 
         """
-        # Action is 0, 1  to whether take into account an NE or not, ToDo check if bool safe
-        self._action_spec = BoundedArraySpec(shape=(), dtype=y_train.dtype, minimum=0, maximum=1, name="action")
+        # Action is 0, 1  to whether take into account an NE or not
+        # Updated to O (0), Verb (1), Device (2), Ingr (3)
+        self._action_spec = BoundedArraySpec(shape=(), dtype=y_train.dtype, minimum=0, maximum=3, name="action")
         # Observation is the embedding of the NE, which is between 0 and 1
         # self._observation_spec = ArraySpec(shape=X_train.shape[0, 0, :], dtype=X_train.dtype, name="observation")
         self._observation_spec = BoundedArraySpec(shape=X_train[0, 0, :].shape, minimum=0, maximum=1,

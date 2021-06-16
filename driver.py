@@ -61,8 +61,9 @@ class IntervalDriver(driver.Driver, ABC):
     ) -> Tuple[ts.TimeStep, types.NestedArray]:
 
         interval_number_of_recipes = 0
-        num_agents_per_recipe = 0
+        # num_agents_per_recipe = 0
         while interval_number_of_recipes < self._interval_number_of_recipes:
+            # Policy
             action_step = self.policy.action(time_step, policy_state)
             next_time_step = self.env.step(action_step.action)
 
@@ -79,8 +80,8 @@ class IntervalDriver(driver.Driver, ABC):
                 # ToDo Get the number of actions
                 trajs = self._episode_buffer.as_dataset(single_deterministic_pass=True)
                 # ToDo Apply the estimate on the Positive rewards
-                self.env.n_NE_estimate
-                log
+
+                reward = self.episodic_verb_reward()
                 # ToDo Append to recipe buffer
                 self._recipe_buffer.add_batch(trajs)
                 # Re-Init episode buffer
@@ -121,9 +122,11 @@ class IntervalDriver(driver.Driver, ABC):
     def get_buffer_observer(self):
         return self._observers
 
-    def episodic_verb_reward(self):
+    def episodic_verb_reward(self, estimate_discount=0.5):
         """Penalise with a log function if away from the number of verbs divided by the NEs"""
-        pass
+        estimate = self.env.n_NE_estimate
+        actual = None
+        return np.exp(abs(estimate-actual)) * estimate_discount
 
     def convolution_reward(self):
         pass

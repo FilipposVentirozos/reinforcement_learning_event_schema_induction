@@ -371,6 +371,13 @@ event representation
         - Can easily encode different types
         - Have the risk of runing into too many different types making it not enough data to produce
             - A workaround could be to cluster the NEs
+                - Cluster each NE type
+                    - To cluster ingrs
+                        - First find the average of each embedding ingr group (based on labels)
+                        - Then cluster
+            - For multiple NEs
+                - Do one pass after the training and identify the common events which have at least 2, 3 (apriori algorithm)
+                - Encode the events with the most possible matches
 
 Event Methodology
     - From threads encode an event
