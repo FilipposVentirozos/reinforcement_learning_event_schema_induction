@@ -378,6 +378,8 @@ event representation
             - For multiple NEs
                 - Do one pass after the training and identify the common events which have at least 2, 3 (apriori algorithm)
                 - Encode the events with the most possible matches
+            - N-grams of NEs
+                - take the average I guess
 
 Event Methodology
     - From threads encode an event

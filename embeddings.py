@@ -4,6 +4,7 @@ import numpy as np
 import json
 import spacy
 # import nltk
+import tensorflow as tf
 from nltk.corpus import wordnet as wn
 import re
 from collections import defaultdict
@@ -45,8 +46,9 @@ class DataSet:
         with open(path_in, "r") as js:
             d_ = json.load(js)
         all_ingrs = 0
-        recipes = []
+        recipes_x, recipes_label, recipes_ingr_label = list(), list(), list()
         deubgger_counter = 0
+        max_recipe_length = 0
         for recipe in d_:
             deubgger_counter += 1
             doc = self.nlp(recipe["text"])
@@ -100,6 +102,8 @@ class DataSet:
                         target_var.append("O")
                 else:
                     target_var.append("O")
+            if counter > max_recipe_length:
+                max_recipe_length = counter
             # Check if all the ingredients got matched
             assert len(ingrs) == ingr_counter_match
             # Check if the target variables is the same with the tokens
@@ -112,16 +116,47 @@ class DataSet:
             # pprint.pprint(self.ingr_class_dict)
             logger.info("___ New recipe ___")
             # Assign the embeddings and make the variables to two integer columns for array
-            recipes.append((x, DataSet.get_target_int(target_var)))
+            # recipes.append((x, DataSet.get_target_int(target_var)))
+            recipes_x.append(x)
+            _label, _ingr_label = DataSet.get_target_int(target_var)
+            recipes_label.append(_label)
+            recipes_ingr_label.append(_ingr_label)
             if deubgger_counter == 4:
-                print()
+                # Save the X
+                # Make an array with all the length equal
+                template_shape = recipes_x[0][0].shape
+                tensors = list()
+                for x in recipes_x:
+                    padding = tf.zeros((max_recipe_length - len(x), template_shape.numel()), tf.float32)
+                    tensors.append(tf.concat([tf.stack(x), padding], axis=0))
+                tensor_x = tf.stack(tensors)
+                # Convert to Numpy because cannot save the EagerTensor at the moment
+                # tf.data.experimental.save(tensor_x, path_out + "_x")
+                np.save(path_out + "_x", tensor_x.numpy())  # Keeps precision
+                # To load
+                # np.load(path_out + "_x.npy")
+
+                # Save the labels, as numpy
+                labs = list()
+                for lab in recipes_label:
+                    padding = np.full(max_recipe_length - len(lab), -1, dtype=np.int)
+                    labs.append(np.append(np.array(lab), padding))
+                np.save(path_out + "_labels", np.array(labs))
+                # To load
+                # np.load(path_out + "_labels.npy")
+
+                # Save the Ingredient labels
+                labs = list()
+                for lab in recipes_ingr_label:
+                    padding = np.full(max_recipe_length - len(lab), 0, dtype=np.int)
+                    labs.append(np.append(np.array(lab), padding))
+                np.save(path_out + "_labels_ingrs", np.array(labs))
+                # To load
+                # np.load(path_out + "_labels_ingrs.npy")
         pprint.pprint(self.ingr_class_dict)
         # Transform to numpy array
         print()
         # Write to file
-
-        with open(path_out, "w") as js:
-            json.dump(recipes, js, indent=4)
 
     def recipe_iter(self):
         for X, y in zip(self.X_train, self.y_train):
