@@ -46,7 +46,9 @@ class DataSet:
             d_ = json.load(js)
         all_ingrs = 0
         recipes = []
+        deubgger_counter = 0
         for recipe in d_:
+            deubgger_counter += 1
             doc = self.nlp(recipe["text"])
             ingrs = dict()
             for idx, attr in zip(recipe["spans"], recipe["meta"]["annos"]):
@@ -109,8 +111,15 @@ class DataSet:
             # logger.debug(target_var)
             # pprint.pprint(self.ingr_class_dict)
             logger.info("___ New recipe ___")
-            recipes.append((x, target_var))
+            # Assign the embeddings and make the variables to two integer columns for array
+            recipes.append((x, DataSet.get_target_int(target_var)))
+            if deubgger_counter == 4:
+                print()
         pprint.pprint(self.ingr_class_dict)
+        # Transform to numpy array
+        print()
+        # Write to file
+
         with open(path_out, "w") as js:
             json.dump(recipes, js, indent=4)
 
@@ -222,10 +231,33 @@ class DataSet:
 
         return word_embedding
 
+    @staticmethod
+    def get_target_int(target: str):
+        """ The mapping is 0 = O, 1 = verb, 2 = device, 3 = ingredient.
+        The count of ingrs groups start from 1, 0 are the non ingrs for the ingr_label.
+        :param target:
+        :return:
+        """
+        label, ingr_label = list(), list()
+        for lab in target:
+            if lab == "O":
+                label.append(0)
+                ingr_label.append(0)
+            elif lab == "verb":
+                label.append(1)
+                ingr_label.append(0)
+            elif lab == "device":
+                label.append(2)
+                ingr_label.append(0)
+            else:  # Ingredient
+                label.append(3)
+                ingr_label.append(int(lab.split("_")[1]))
+        return label, ingr_label
+
 
 if __name__ == '__main__':
     d = DataSet()
     d.create_dataset("/home/chroner/PhD_remote/RL_Event_Schema_Induction/data/raw/recipes_0_0.json",
-                     "/home/chroner/PhD_remote/RL_Event_Schema_Induction/data/processed/recipes_0_0_proc.json")
+                     "/home/chroner/PhD_remote/RL_Event_Schema_Induction/data/processed/recipes_0_0_proc")
     # for i in d.recipe_iter():
     #     print(i)
