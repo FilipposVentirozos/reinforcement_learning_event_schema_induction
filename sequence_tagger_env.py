@@ -3,7 +3,13 @@ from abc import ABC
 import numpy as np
 from tf_agents.environments.py_environment import PyEnvironment
 from tf_agents.specs.array_spec import BoundedArraySpec
+from tf_agents.specs.tensor_spec import BoundedTensorSpec
+
 from tf_agents.trajectories import time_step as ts
+import logging
+logger = logging.getLogger('sequence_tagger_env')
+logger.addHandler(logging.StreamHandler())
+logger.setLevel(logging.INFO)
 
 
 class EndOfDataSet(Exception):
@@ -43,36 +49,40 @@ class SequenceTaggerEnv(PyEnvironment, ABC):
         # Action is 0, 1  to whether take into account an NE or not
         # Updated to O (0), Verb (1), Device (2), Ingr (3)
         # -1 would mean that is non existent, so it's omitted below
-        self._action_spec = BoundedArraySpec(shape=(), dtype=y_train.dtype, minimum=0, maximum=3, name="action")
+        # self._action_spec = BoundedArraySpec(shape=(), dtype=y_train.dtype, minimum=0, maximum=3, name="action")
+        self._action_spec = BoundedTensorSpec(shape=(), dtype=y_train.dtype, minimum=0, maximum=3, name="action")
         # Observation is the embedding of the NE, which is between 0 and 1
         # self._observation_spec = ArraySpec(shape=X_train.shape[0, 0, :], dtype=X_train.dtype, name="observation")
         # self._observation_spec = BoundedArraySpec(shape=X_train[0, 0, :].shape, minimum=0, maximum=1,
         #                                           dtype=X_train.dtype, name="observation")
-        self._observation_spec = BoundedArraySpec(shape=X_train[0, 0, :].shape, minimum=X_train.min(), maximum=X_train.max(),
-                                                  dtype=X_train.dtype, name="observation")
+        self._observation_spec = BoundedTensorSpec(shape=X_train[0, 0, :].shape, minimum=X_train.min(),
+                                                   maximum=X_train.max(), dtype=X_train.dtype, name="observation")
         self._episode_ended = False
 
         self.X_train = X_train
         self.y_train = y_train
 
         # Count the recipes for env reset and also to establish posterior sequence reward
-        self.rec_count = -1  # It will increment to 0 index
+        self.rec_count = 0  # It was -1
         # self.seed_buffer = list()
         self.token_trajectory = list()
         # Sample an id to start with
 
         self.seed = -1  # It will increment to 0 index
-        self.set_seed_sequential()
+
+        self.recipe_length = self.get_recipe_length()
+
+        # self.set_seed_sequential()  # Is the self._reset()
         self.episode_step = 0  # Episode step, resets every episode
-        self.recipe_length = np.inf
+
 
         # Inside recipe counters
-        self._maxed_increment = self.maxed_increment()
+        # self._maxed_increment = self.maxed_increment() # Is Updated on the function above self.set_seed_sequential()
         self.balance = 0
         self.increment = 0
         # Each episode is a recipe (1 of 50)
         self._reset()
-        self._state = self.X_train[self.rec_count, self.seed, :]
+        # self._state = self.X_train[self.rec_count, self.seed, :]  # Is Updated on the function above self.set_seed_sequential()
 
         # # The below variables are used for random sampling, the previous version
         # self.search_space = 10  # The number of candidate states
@@ -101,6 +111,23 @@ class SequenceTaggerEnv(PyEnvironment, ABC):
     def observation_spec(self):
         """Definition of the continuous statespace e.g. the observations in typical RL environments."""
         return self._observation_spec
+
+    def get_recipe_length(self):
+        """ Get a recipe's last token before the padding which are zero. Check fast for when zero, with chance of zero
+        embedding.
+
+        :return: The token index that is zero or out of bound for the non padded recipe
+        """
+        try:
+            assert np.argwhere(self.X_train[self.rec_count, :, 0] == 0)[0] == \
+                   np.argwhere(self.X_train[self.rec_count, :, 3] == 0)[0]
+        except AssertionError as e:
+            logger.info("Embedding zero found\n" + str(e))
+            return max(np.argwhere(self.X_train[self.rec_count, :, 0] == 0)[0][0],
+                       np.argwhere(self.X_train[self.rec_count, :, 3] == 0)[0][0])
+        except IndexError:
+            return len(self.X_train[self.rec_count, :, 0])
+        return np.argwhere(self.X_train[self.rec_count, :, 0] == 0)[0][0]
 
     @DeprecationWarning
     def set_seed_random_NE(self):
@@ -180,7 +207,7 @@ class SequenceTaggerEnv(PyEnvironment, ABC):
                 break
         self.recipe_length = i
 
-    def maxed_increment(self):
+    def maxed_increment(self): # ToDo Double check that
         """ Return the index that is farthest from the seed id.
         Actually we return the index after that to count for the last action.
 

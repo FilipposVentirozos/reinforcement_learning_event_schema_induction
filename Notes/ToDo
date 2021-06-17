@@ -49,3 +49,7 @@ Start paper
 - Find which VAE is best suited, that I can find similar ingredients, maybe also support hierarchies, has code
 - What would be the fallback option?
     - Concatenate each event based on lemma and hypernym, make a dictionary of those and then learn the sequences, via RNN?
+
+
+Code
+    - What is the time_step_spec exactly? Set it to Tensor to match with the rest
