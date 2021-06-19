@@ -1,12 +1,14 @@
 from abc import ABC
 
 import numpy as np
+import tensorflow as tf
 from tf_agents.environments.py_environment import PyEnvironment
 from tf_agents.specs.array_spec import BoundedArraySpec
-from tf_agents.specs.tensor_spec import BoundedTensorSpec
+from tf_agents.specs.tensor_spec import BoundedTensorSpec, TensorSpec
 
 from tf_agents.trajectories import time_step as ts
 import logging
+from tf_agents.typing import types
 logger = logging.getLogger('sequence_tagger_env')
 logger.addHandler(logging.StreamHandler())
 logger.setLevel(logging.INFO)
@@ -50,13 +52,14 @@ class SequenceTaggerEnv(PyEnvironment, ABC):
         # Updated to O (0), Verb (1), Device (2), Ingr (3)
         # -1 would mean that is non existent, so it's omitted below
         # self._action_spec = BoundedArraySpec(shape=(), dtype=y_train.dtype, minimum=0, maximum=3, name="action")
-        self._action_spec = BoundedTensorSpec(shape=(), dtype=y_train.dtype, minimum=0, maximum=3, name="action")
+        self._action_spec = BoundedTensorSpec(shape=(), dtype=y_train.dtype, minimum=0, maximum=3, name="action") # Maybe change to tf dtype
         # Observation is the embedding of the NE, which is between 0 and 1
         # self._observation_spec = ArraySpec(shape=X_train.shape[0, 0, :], dtype=X_train.dtype, name="observation")
         # self._observation_spec = BoundedArraySpec(shape=X_train[0, 0, :].shape, minimum=0, maximum=1,
         #                                           dtype=X_train.dtype, name="observation")
-        self._observation_spec = BoundedTensorSpec(shape=X_train[0, 0, :].shape, minimum=X_train.min(),
+        self._observation_spec = BoundedTensorSpec(shape=X_train[0, 0, :].shape, minimum=X_train.min(), # Maybe change to tf dtype
                                                    maximum=X_train.max(), dtype=X_train.dtype, name="observation")
+        # self._reward_spec = TensorSpec(shape=(), dtype=tf.float32, name='reward')
         self._episode_ended = False
 
         self.X_train = X_train
@@ -101,6 +104,17 @@ class SequenceTaggerEnv(PyEnvironment, ABC):
         #     capacity=replay_buffer_capacity,
         #     data_spec=tensor_spec.to_nest_array_spec(buffer_unit))
 
+    def reward_spec(self) -> types.NestedTensorSpec:
+        """Defines the rewards that are returned by `step()`.
+
+        Override this method to define an environment that uses non-standard reward
+        values, for example an environment with array-valued rewards.
+
+        Returns:
+          An `ArraySpec`, or a nested dict, list or tuple of `ArraySpec`s.
+        """
+        return TensorSpec(shape=(), dtype=tf.float32, name='reward')
+
     def action_spec(self):
         """
         Definition of the discrete actionspace.
@@ -110,6 +124,7 @@ class SequenceTaggerEnv(PyEnvironment, ABC):
 
     def observation_spec(self):
         """Definition of the continuous statespace e.g. the observations in typical RL environments."""
+        # env.time_step_spec().observation == env._observation_spec
         return self._observation_spec
 
     def get_recipe_length(self):

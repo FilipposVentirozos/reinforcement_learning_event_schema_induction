@@ -5,7 +5,7 @@ class Policy:
 
     def __init__(self, action_spec, *, policy="random"):
         if policy == "random":
-            # Random Policy, choose either 0 or 1
+            # Random Policy, choose either 0, 1, 2, 3
             self.policy_random = random_py_policy.RandomPyPolicy(time_step_spec=None,
                 action_spec=action_spec)
 

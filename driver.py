@@ -29,7 +29,7 @@ class IntervalDriver(driver.Driver, ABC):
             policy: py_policy.PyPolicy,
             # agents_per_recipe: types.Int,
             buffer_observer: Sequence[Callable[[trajectory.Trajectory], Any]],
-            observers: Sequence[Callable[[trajectory.Trajectory], Any]],
+            observers: Sequence[Callable[[trajectory.Trajectory], Any]] = None,
             transition_observers: Optional[Sequence[Callable[[trajectory.Transition],
                                                              Any]]] = None,
             interval_number_of_recipes: Optional[types.Int] = None):
@@ -55,11 +55,21 @@ class IntervalDriver(driver.Driver, ABC):
     def _recipe_buffer_reset(self):
         self._recipe_buffer = self._buffer_template
 
-    def run(self,
-            time_step: ts.TimeStep,
-            policy_state: types.NestedArray = ()
-    ) -> Tuple[ts.TimeStep, types.NestedArray]:
+    # Initial driver.run will reset the environment and initialize the policy.
+    # final_time_step, policy_state = driver.run()
+    # From https://www.tensorflow.org/agents/tutorials/4_drivers_tutorial
+    # def run(self,
+    #         time_step: ts.TimeStep,
+    #         policy_state: types.NestedArray = ()
+    # ) -> Tuple[ts.TimeStep, types.NestedArray]:
+    def run(self):
+        """ The timestep and Policy are provided outside the scope of this functions
 
+        :return:
+        """
+        # time_step = self.env.id  # This is the token ID in a recipe, gets zero after each recipe
+        time_step # Need to set the first time step instead
+        policy_state = self.policy.get_initial_state(self.env.batch_size)
         interval_number_of_recipes = 0
         # num_agents_per_recipe = 0
         while interval_number_of_recipes < self._interval_number_of_recipes:

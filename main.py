@@ -1,13 +1,15 @@
 import tensorflow as tf
-from tf_agents.replay_buffers import py_uniform_replay_buffer
+from tf_agents.replay_buffers import py_uniform_replay_buffer, tf_uniform_replay_buffer
 from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import trajectory
 from tf_agents.networks import sequential
 from tf_agents.agents.ppo.ppo_agent import PPOAgent
+from tf_agents.agents.dqn import dqn_agent
+from tf_agents.policies import random_py_policy
 
 # Local
 from archive import embeddings
-import policy
+# import policy
 import sequence_tagger_env
 from dataset import DataSet
 from driver import IntervalDriver
@@ -46,7 +48,8 @@ dat.fetch_from_path(dataset_path)
 env = sequence_tagger_env.SequenceTaggerEnv(dat.X, dat.label)
 
 # Initialise the Policy
-policy_ = policy.Policy(env.action_spec(), policy="random")
+# policy_ = policy.Policy(env.action_spec(), policy="random")
+policy_ = random_py_policy.RandomPyPolicy(time_step_spec=None, action_spec=env.action_spec())
 
 # Create PPO agent
 # Time_step_spec, could be provided directly e.g.:
@@ -79,23 +82,42 @@ q_values_layer = tf.keras.layers.Dense(
     bias_initializer=tf.keras.initializers.Constant(-0.2))
 q_net = sequential.Sequential(dense_layers + [q_values_layer])
 
-ppo = PPOAgent(time_step_spec=env.time_step_spec(), action_spec=env.action_spec(), optimizer=optimizer,
-               actor_net=q_net, value_net=q_net)
+# Example of a time step
+# TimeStep(
+# {'discount': BoundedArraySpec(shape=(), dtype=dtype('float32'), name='discount', minimum=0.0, maximum=1.0),
+#  'observation': BoundedArraySpec(shape=(4,), dtype=dtype('float32'), name='observation', minimum=[-4.8000002e+00 -3.4028235e+38 -4.1887903e-01 -3.4028235e+38], maximum=[4.8000002e+00 3.4028235e+38 4.1887903e-01 3.4028235e+38]),
+#  'reward': ArraySpec(shape=(), dtype=dtype('float32'), name='reward'),
+#  'step_type': ArraySpec(shape=(), dtype=dtype('int32'), name='step_type')})
+
+print(env.time_step_spec())
+# ppo = PPOAgent(time_step_spec=env.time_step_spec(), action_spec=env.action_spec(), optimizer=optimizer,
+#                actor_net=q_net, value_net=q_net) # Have to fix the actor and value network
+agent = dqn_agent.DqnAgent(
+    env.time_step_spec(),
+    env.action_spec(),
+    q_network=q_net,
+    optimizer=optimizer)
+
+agent.initialize()
 
 # Replay buffer
 # Replay buffer, to store variables and train accordingly
 batch_size = 32
-replay_buffer_capacity = 10_000 * batch_size
-# Use agent's traj unit for the buffer
-buffer_unit = (tf.TensorSpec([1], tf.bool, 'action'),  # Binary is 0 or 1
-               (tf.TensorSpec([5], tf.float32, 'lidar'),
-                # ToDo set the NEs values instead, add index info as well, reward?
-                tf.TensorSpec([3, 2], tf.float32, 'camera')))
-py_replay_buffer = py_uniform_replay_buffer.PyUniformReplayBuffer(
-    capacity=replay_buffer_capacity,
-    data_spec=tensor_spec.to_nest_array_spec(buffer_unit))
+replay_buffer_capacity = 300 * batch_size  # Cannot handle too big of capacity locally
+# # Use agent's traj unit for the buffer
+# buffer_unit = (tf.TensorSpec([1], tf.bool, 'action'),  # Binary is 0 or 1
+#                (tf.TensorSpec([5], tf.float32, 'lidar'),
+#                 # ToDo set the NEs values instead, add index info as well, reward?
+#                 tf.TensorSpec([3, 2], tf.float32, 'camera')))
+# py_replay_buffer = py_uniform_replay_buffer.PyUniformReplayBuffer(
+#     capacity=replay_buffer_capacity,
+#     data_spec=tensor_spec.to_nest_array_spec(buffer_unit))
+replay_buffer = tf_uniform_replay_buffer.TFUniformReplayBuffer(
+    agent.collect_data_spec,
+    batch_size=batch_size,
+    max_length=replay_buffer_capacity)
 
-driver = IntervalDriver(env=env, policy=policy_, buffer_observer=py_replay_buffer)
+driver = IntervalDriver(env=env, policy=policy_, buffer_observer=replay_buffer)
 
 for _ in range(num_iterations):
     driver.run()
