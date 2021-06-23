@@ -53,3 +53,6 @@ Start paper
 
 Code
     - What is the time_step_spec exactly? Set it to Tensor to match with the rest
+
+Check termination vs truncation
+how to start and stop in one step

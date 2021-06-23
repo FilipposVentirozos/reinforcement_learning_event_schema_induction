@@ -13,7 +13,6 @@ logger = logging.getLogger('sequence_tagger_env')
 logger.addHandler(logging.StreamHandler())
 logger.setLevel(logging.INFO)
 
-
 class EndOfDataSet(Exception):
     """ Raise when the end of Dataset
 
@@ -34,7 +33,7 @@ class SequenceTaggerEnv(PyEnvironment, ABC):
     Based on https://www.tensorflow.org/agents/tutorials/2_environments_tutorial
     """
 
-    def __init__(self, X_train: np.ndarray, y_train: np.ndarray):  # , per_rec: int
+    def __init__(self, X_train: np.ndarray, y_train: np.ndarray, ne_reward=50, non_ne_traj_mult=2):  # , per_rec: int
         """Initialization of environment with X_train and y_train.
 
         :param X_train: Features shaped: [samples, ..., ]
@@ -59,12 +58,15 @@ class SequenceTaggerEnv(PyEnvironment, ABC):
         #                                           dtype=X_train.dtype, name="observation")
         self._observation_spec = BoundedTensorSpec(shape=X_train[0, 0, :].shape, minimum=X_train.min(), # Maybe change to tf dtype
                                                    maximum=X_train.max(), dtype=X_train.dtype, name="observation")
+        self.empty_observation = np.zeros(shape=X_train[0, 0, :].shape, dtype=X_train.dtype)
+
         # self._reward_spec = TensorSpec(shape=(), dtype=tf.float32, name='reward')
         self._episode_ended = False
 
         self.X_train = X_train
         self.y_train = y_train
-
+        self.ne_reward = ne_reward
+        self.non_ne_traj_mult = non_ne_traj_mult
         # Count the recipes for env reset and also to establish posterior sequence reward
         self.rec_count = 0  # It was -1
         # self.seed_buffer = list()
@@ -144,24 +146,6 @@ class SequenceTaggerEnv(PyEnvironment, ABC):
             return len(self.X_train[self.rec_count, :, 0])
         return np.argwhere(self.X_train[self.rec_count, :, 0] == 0)[0][0]
 
-    @DeprecationWarning
-    def set_seed_random_NE(self):
-        """The seed should be a random NE, we do sampling without replacement since we do not want to have
-         the same NE seed and we want to prioritise NE samples that have not been tagged yet."""
-
-        NE_samples = np.nonzero(self.y_train[self.per_rec_counter, :])[0]
-        # Get the seed IDs positions
-        seed_buffer_ids = [np.argwhere(NE_samples == i) for i in self.seed_buffer]
-        NE_samples = np.delete(NE_samples, seed_buffer_ids)
-        try:
-            # Prioritse a sample NE that has not been tagged yet
-            used_NEs_buffer_ids = [np.argwhere(NE_samples == i) for i in self.used_NEs]
-            NE_used_samples = np.delete(NE_samples, used_NEs_buffer_ids)
-            self.seed = np.random.choice(NE_used_samples)
-        except ValueError:
-            self.seed = np.random.choice(NE_samples)
-        self.seed_buffer.append(self.seed)
-
     def set_seed_sequential(self):
         """ Set the seed one after one, no matter is an NE or not
 
@@ -175,11 +159,19 @@ class SequenceTaggerEnv(PyEnvironment, ABC):
             self._maxed_increment = self.maxed_increment()  # Get the farthest away token for the end of episode
             self.balance = 0
             self.increment = 0
+
             if np.sum(self._state) == 0:  # Have exhausted the tokens on the current recipe, move to next recipe,
                 # 0 would denote an empty cell
                 self.next_recipe()
-                return
-            ts.restart(self._state)
+                # return
+            # # If it is a NE
+            # if self.y_train[self.rec_count, self.id, :] > 0:
+            #     return ts.restart(self._state, self.ne_reward)
+            # # If it's an O then skip it and move to the next token
+            # else:
+            #     return ts.restart(self._state, -self.ne_reward)
+            return ts.restart(self._state)
+
         except IndexError:
             try:
                 assert self.X_train[self.rec_count, 0, :]
@@ -187,20 +179,6 @@ class SequenceTaggerEnv(PyEnvironment, ABC):
             except IndexError:  # If the error is not caused by end of data, then the index means we should go to the
                 # next recipe
                 self.next_recipe()
-
-    def set_seed_random(self):
-        """ Set the seed random, without replacement from a recipe, no matter is an NE or not
-
-        :return:
-        """
-        pass
-
-    @DeprecationWarning
-    def set_id_via_normal_distr(self, sigma=3):
-        while True:
-            new_id = round(np.random.normal(self.seed, sigma, 1)[0])
-            if new_id in self.seed_buffer:
-                continue
 
     def set_id_zig_zag(self):
 
@@ -216,52 +194,28 @@ class SequenceTaggerEnv(PyEnvironment, ABC):
         if self.id == self._maxed_increment:
             raise EndOfEpisode
 
-    def get_recipe_token_length(self):
-        for i in range(self.X_train.shape[1]):
-            if np.sum(self.X_train[0, i, :]) == 0:
-                break
-        self.recipe_length = i
-
-    def maxed_increment(self): # ToDo Double check that
+    def maxed_increment(self):
         """ Return the index that is farthest from the seed id.
         Actually we return the index after that to count for the last action.
 
         :return:
         """
-        max_token_index = self.recipe_length - 1
-        if max_token_index - self.seed > self.seed:
-            return -1  # Return the next to maximum, here is max_token_index
+        # max_token_index = self.recipe_length - 1
+        if self.recipe_length - self.seed > self.seed:
+            # According to zigzag that will be the next after the recipe max (recipe_length)
+            return -self.recipe_length
         else:
-            return max_token_index + 1  # Return the next to maximum
-
-    @DeprecationWarning
-    def _reset_old(self, ):
-        """Shuffles data and returns the first state of the shuffled data to begin training on new episode."""
-
-        # np.random.shuffle(self.id)  # Shuffle the X and y data
-        # self.episode_step = 0
-
-        # self._episode_ended = False  # Reset terminal condition
-        self.per_rec_counter += 1
-        # Check if the number of passes in a recipe have been achieved
-        # If yes proceed to the new recipe, if not start from a new seed in the current recipe
-        if self.per_rec_counter >= self.per_rec:
-            self.rec_count += 1  # Next recipe
-            self.per_rec_counter = 0
-            self.seed_buffer, self.used_NEs = list()
-        # self.set_id()
-        self.set_seed()
-        self._state = self.X_train[self.per_rec_counter, self.id, :]
-
-        return ts.restart(self._state)
+            # According to zigzag that will be the next after the recipe max (0). Hence,
+            # the distance after the self.seed plus 1
+            return (2*self.seed) + 1  # max_token_index + 1  # Return the next to maximum
 
     def next_recipe(self):
         self.rec_count += 1  # Go to next recipe
         self.seed = 0  # Start from the first token
-        self.get_recipe_token_length()
+        self.recipe_length = self.get_recipe_length()
         self.recipe_number_of_NEs_estimate()  # For posterior reward
 
-        self.set_seed_sequential()
+        self._reset()
 
     def _reset(self):
         """ Go to the next token and start exploring. If no tokens left, then go to the next recipe.
@@ -285,34 +239,53 @@ class SequenceTaggerEnv(PyEnvironment, ABC):
         #     return self.reset()
 
         # env_action = self.y_train[self.id[self.episode_step]]  # The label of the current state
-
-        try:
-            env_action = self.y_train[self.rec_count, self.id]  # The label of the current state
-            # Not an NE Reward
-            if action == env_action:
-                reward = 50
-            else:
-                reward = -50
-        except IndexError:
-            reward = 0
-        self.episode_step += 1
-
         # Deprecated
         # if self.episode_step == self.X_train.shape[0] - 1:  # If last step in data
         #     self._episode_ended = True
         # self._state = self.X_train[self.id[self.episode_step]]  # Update state with new datapoint
-
+        # Do it bit inversely, calculate the new state first
+        prev_id = self.id
+        reward = None
+        # Update self.id to get the new state
         try:
             self.set_id_zig_zag()
         except EndOfEpisode:
             self._episode_ended = True
+            self._state = self.empty_observation
             # try:
             #     self.set_seed_sequential()
             # except EndOfDataSet:
+        try:
+            self._state = self.X_train[self.rec_count, self.id, :]
+        # Due to being out of bounds
+        except IndexError:
+            self._state = self.empty_observation
 
-        self._state = self.X_train[self.rec_count, self.id, :]
+        try:
+            try:
+                # The label of the previous state where the action was taken upon
+                env_action = self.y_train[self.rec_count, prev_id]
+            # Due to being out of bounds
+            except IndexError:
+                env_action = 0
+            # Not an NE Reward
+            if action == env_action:
+                reward = self.ne_reward
+            elif action == 4:  # The choice action to stop the episode
+                if self.y_train[self.rec_count, self.seed] > 0:  # An NE
+                    ts.termination(self._state, reward=self.non_ne_traj_mult * (-self.ne_reward))
+                else:
+                    ts.termination(self._state, reward=self.non_ne_traj_mult * self.ne_reward)
+            else:
+                reward = -self.ne_reward
+        except IndexError:
+            reward = 0
+        self.episode_step += 1
 
-        # ToDo Currently it does not take into account the action for the last token
+        # Set reward if non-NE seed
+        if self.y_train[self.rec_count, self.seed] == 0:
+            return ts.transition(self._state, reward=self.non_ne_traj_mult * (-self.ne_reward))
+
         if self._episode_ended:
             return ts.termination(self._state, reward)
         else:
@@ -326,10 +299,6 @@ class SequenceTaggerEnv(PyEnvironment, ABC):
         #     return ts.transition(
         #         np.array([self._state], dtype=np.int32), reward=0.0, discount=1.0)
 
-    @DeprecationWarning  # This function will be at the Drivers level
-    def retro_rewards(self, trajectory):
-        return None
-
     def recipe_number_of_NEs_estimate(self):
         """Call when starting a new recipe, we hypothesize that the label 1 refers to verbs.
         The assumption is that the number of verbs should be the number of events.
@@ -342,3 +311,63 @@ class SequenceTaggerEnv(PyEnvironment, ABC):
             if k == 1:
                 verb_sum = float(v)
         self.n_NE_estimate = NE_sum/verb_sum
+
+    @DeprecationWarning
+    def set_seed_random(self):
+        """ Set the seed random, without replacement from a recipe, no matter is an NE or not
+
+        :return:
+        """
+        pass
+    @DeprecationWarning
+    def set_id_via_normal_distr(self, sigma=3):
+        while True:
+            new_id = round(np.random.normal(self.seed, sigma, 1)[0])
+            if new_id in self.seed_buffer:
+                continue
+    @DeprecationWarning  # This function will be at the Drivers level
+    def retro_rewards(self, trajectory):
+        return None
+    @DeprecationWarning
+    def _reset_old(self, ):
+        """Shuffles data and returns the first state of the shuffled data to begin training on new episode."""
+
+        # np.random.shuffle(self.id)  # Shuffle the X and y data
+        # self.episode_step = 0
+
+        # self._episode_ended = False  # Reset terminal condition
+        self.per_rec_counter += 1
+        # Check if the number of passes in a recipe have been achieved
+        # If yes proceed to the new recipe, if not start from a new seed in the current recipe
+        if self.per_rec_counter >= self.per_rec:
+            self.rec_count += 1  # Next recipe
+            self.per_rec_counter = 0
+            self.seed_buffer, self.used_NEs = list()
+        # self.set_id()
+        self.set_seed()
+        self._state = self.X_train[self.per_rec_counter, self.id, :]
+
+        return ts.restart(self._state)
+    @DeprecationWarning
+    def get_recipe_token_length(self):
+        for i in range(self.X_train.shape[1]):
+            if np.sum(self.X_train[0, i, :]) == 0:
+                break
+        self.recipe_length = i
+    @DeprecationWarning
+    def set_seed_random_NE(self):
+        """The seed should be a random NE, we do sampling without replacement since we do not want to have
+         the same NE seed and we want to prioritise NE samples that have not been tagged yet."""
+
+        NE_samples = np.nonzero(self.y_train[self.per_rec_counter, :])[0]
+        # Get the seed IDs positions
+        seed_buffer_ids = [np.argwhere(NE_samples == i) for i in self.seed_buffer]
+        NE_samples = np.delete(NE_samples, seed_buffer_ids)
+        try:
+            # Prioritse a sample NE that has not been tagged yet
+            used_NEs_buffer_ids = [np.argwhere(NE_samples == i) for i in self.used_NEs]
+            NE_used_samples = np.delete(NE_samples, used_NEs_buffer_ids)
+            self.seed = np.random.choice(NE_used_samples)
+        except ValueError:
+            self.seed = np.random.choice(NE_samples)
+        self.seed_buffer.append(self.seed)
