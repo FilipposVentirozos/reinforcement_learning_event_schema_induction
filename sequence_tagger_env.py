@@ -86,7 +86,7 @@ class SequenceTaggerEnv(PyEnvironment, ABC):
         self.balance = 0
         self.increment = 0
         # Each episode is a recipe (1 of 50)
-        self._reset()
+        # self._reset()
         # self._state = self.X_train[self.rec_count, self.seed, :]  # Is Updated on the function above self.set_seed_sequential()
 
         # # The below variables are used for random sampling, the previous version
@@ -160,10 +160,12 @@ class SequenceTaggerEnv(PyEnvironment, ABC):
             self.balance = 0
             self.increment = 0
 
-            if np.sum(self._state) == 0:  # Have exhausted the tokens on the current recipe, move to next recipe,
-                # 0 would denote an empty cell
+            if self.seed > self.recipe_length:
                 self.next_recipe()
-                # return
+            # if np.sum(self._state) == 0:  # Have exhausted the tokens on the current recipe, move to next recipe,
+            #     # 0 would denote an empty cell
+            #     self.next_recipe()
+            #     # return
             # # If it is a NE
             # if self.y_train[self.rec_count, self.id, :] > 0:
             #     return ts.restart(self._state, self.ne_reward)

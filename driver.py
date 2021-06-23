@@ -68,7 +68,7 @@ class IntervalDriver(driver.Driver, ABC):
         :return:
         """
         # time_step = self.env.id  # This is the token ID in a recipe, gets zero after each recipe
-        time_step # Need to set the first time step instead, like the time_step_spec type
+        time_step = self.env.reset()  # Check that
         policy_state = self.policy.get_initial_state(self.env.batch_size)
         interval_number_of_recipes = 0
         # num_agents_per_recipe = 0
