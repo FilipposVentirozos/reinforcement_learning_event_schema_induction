@@ -83,14 +83,25 @@ class IntervalDriver(driver.Driver, ABC):
             for observer in self.observers:
                 observer(traj)
             # Add trajectory to buffer
-            self._episode_buffer(traj)
+            # Trajectory(step_type=TensorSpec(shape=(), dtype=tf.int32, name='step_type'),
+            #            observation=BoundedTensorSpec(shape=(768,), dtype=tf.float32, name='observation',
+            #                                          minimum=array(-51.842564, dtype=float32),
+            #                                          maximum=array(12.627596, dtype=float32)),
+            #            action=BoundedTensorSpec(shape=(), dtype=tf.int32, name='action', minimum=array(0, dtype=int32),
+            #                                     maximum=array(4, dtype=int32)), policy_info=(),
+            #            next_step_type=TensorSpec(shape=(), dtype=tf.int32, name='step_type'),
+            #            reward=TensorSpec(shape=(), dtype=tf.float32, name='reward'),
+            #            discount=BoundedTensorSpec(shape=(), dtype=tf.float32, name='discount',
+            #                                       minimum=array(0., dtype=float32), maximum=array(1., dtype=float32)))
+
+            self._episode_buffer.add_batch(traj)
 
             if traj.is_boundary():  # End of episode
                 # Apply the NE reward estimate
                 # ToDo Get the number of actions
                 trajs = self._episode_buffer.as_dataset(single_deterministic_pass=True)
                 # ToDo Apply the estimate on the Positive rewards
-                # ToDo call reset
+                # ToDo call reset from environemnt
                 reward = self.episodic_verb_reward()
                 # ToDo Append to recipe buffer
                 self._recipe_buffer.add_batch(trajs)

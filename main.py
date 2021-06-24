@@ -5,7 +5,9 @@ from tf_agents.trajectories import trajectory
 from tf_agents.networks import sequential
 from tf_agents.agents.ppo.ppo_agent import PPOAgent
 from tf_agents.agents.dqn import dqn_agent
-from tf_agents.policies import random_py_policy
+from tf_agents.policies import random_py_policy, random_tf_policy
+from tf_agents.environments import suite_gym
+
 
 # Local
 from archive import embeddings
@@ -49,7 +51,9 @@ env = sequence_tagger_env.SequenceTaggerEnv(dat.X, dat.label)
 
 # Initialise the Policy
 # policy_ = policy.Policy(env.action_spec(), policy="random")
-policy_ = random_py_policy.RandomPyPolicy(time_step_spec=None, action_spec=env.action_spec())
+# policy_ = random_py_policy.RandomPyPolicy(time_step_spec=env.time_step_spec(), action_spec=env.action_spec())
+# TF equivelant
+policy_ = random_tf_policy.RandomTFPolicy(time_step_spec=env.time_step_spec(), action_spec=env.action_spec())
 
 # Create PPO agent
 # Time_step_spec, could be provided directly e.g.:
@@ -100,20 +104,31 @@ agent = dqn_agent.DqnAgent(
 
 agent.initialize()
 
+# env = suite_gym.load("CartPole-v0")
+# train_py_env = suite_gym.load("CartPole-v0")
+# from tf_agents.environments import tf_py_environment
+# train_env = tf_py_environment.TFPyEnvironment(train_py_env)
+# train_env.reset()
+# time_step = train_env.current_time_step()
+# policy_ = random_py_policy.RandomPyPolicy(time_step_spec=env.time_step_spec(), action_spec=env.action_spec())
+# action_step = policy_.action(time_step)
+# next_time_step = train_env.step(action_step.action)
+# traj = trajectory.from_transition(time_step, action_step, next_time_step)
+
 # Replay buffer
 # Replay buffer, to store variables and train accordingly
-batch_size = 32
-replay_buffer_capacity = 300 * batch_size  # Cannot handle too big of capacity locally
+batch_size = 20  # 768
+replay_buffer_capacity = 1_000  #  * batch_size  # Cannot handle too big of capacity locally
 # # Use agent's traj unit for the buffer
 # buffer_unit = (tf.TensorSpec([1], tf.bool, 'action'),  # Binary is 0 or 1
 #                (tf.TensorSpec([5], tf.float32, 'lidar'),
 #                 # ToDo set the NEs values instead, add index info as well, reward?
 #                 tf.TensorSpec([3, 2], tf.float32, 'camera')))
-# py_replay_buffer = py_uniform_replay_buffer.PyUniformReplayBuffer(
+# replay_buffer = py_uniform_replay_buffer.PyUniformReplayBuffer(
 #     capacity=replay_buffer_capacity,
-#     data_spec=tensor_spec.to_nest_array_spec(buffer_unit))
+#     data_spec=agent.collect_data_spec)
 replay_buffer = tf_uniform_replay_buffer.TFUniformReplayBuffer(
-    agent.collect_data_spec,
+    data_spec=agent.collect_data_spec,  # trajectory item
     batch_size=batch_size,
     max_length=replay_buffer_capacity)
 

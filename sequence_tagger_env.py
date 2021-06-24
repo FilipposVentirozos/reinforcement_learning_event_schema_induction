@@ -51,20 +51,23 @@ class SequenceTaggerEnv(PyEnvironment, ABC):
         # Updated to O (0), Verb (1), Device (2), Ingr (3)
         # -1 would mean that is non existent, so it's omitted below
         # self._action_spec = BoundedArraySpec(shape=(), dtype=y_train.dtype, minimum=0, maximum=3, name="action")
-        self._action_spec = BoundedTensorSpec(shape=(), dtype=y_train.dtype, minimum=0, maximum=3, name="action") # Maybe change to tf dtype
+        self.X_train = tf.convert_to_tensor(X_train, dtype=tf.float32)
+        self.y_train = tf.convert_to_tensor(y_train, dtype=tf.int8)
+        # The three NEs and the option to stop the threadk, a tf.int8 produces an error is not supported
+        self._action_spec = BoundedTensorSpec(shape=(), dtype=tf.int32, minimum=0, maximum=4, name="action") # Maybe change to tf dtype
         # Observation is the embedding of the NE, which is between 0 and 1
         # self._observation_spec = ArraySpec(shape=X_train.shape[0, 0, :], dtype=X_train.dtype, name="observation")
         # self._observation_spec = BoundedArraySpec(shape=X_train[0, 0, :].shape, minimum=0, maximum=1,
         #                                           dtype=X_train.dtype, name="observation")
         self._observation_spec = BoundedTensorSpec(shape=X_train[0, 0, :].shape, minimum=X_train.min(), # Maybe change to tf dtype
-                                                   maximum=X_train.max(), dtype=X_train.dtype, name="observation")
-        self.empty_observation = np.zeros(shape=X_train[0, 0, :].shape, dtype=X_train.dtype)
+                                                   maximum=X_train.max(), dtype=tf.float32, name="observation")
+        self.empty_observation = tf.convert_to_tensor(np.zeros(shape=X_train[0, 0, :].shape, dtype=X_train.dtype),
+                                                      dtype=tf.float32)
 
         # self._reward_spec = TensorSpec(shape=(), dtype=tf.float32, name='reward')
         self._episode_ended = False
 
-        self.X_train = X_train
-        self.y_train = y_train
+
         self.ne_reward = ne_reward
         self.non_ne_traj_mult = non_ne_traj_mult
         # Count the recipes for env reset and also to establish posterior sequence reward
@@ -224,7 +227,7 @@ class SequenceTaggerEnv(PyEnvironment, ABC):
 
         :return:
         """
-        self.set_seed_sequential()
+        return self.set_seed_sequential()
 
     def _step(self, action: int):
         """
@@ -271,9 +274,9 @@ class SequenceTaggerEnv(PyEnvironment, ABC):
             except IndexError:
                 env_action = 0
             # Not an NE Reward
-            if action == env_action:
+            if action.numpy() == env_action.numpy():
                 reward = self.ne_reward
-            elif action == 4:  # The choice action to stop the episode
+            elif action.numpy() == 4:  # The choice action to stop the episode
                 if self.y_train[self.rec_count, self.seed] > 0:  # An NE
                     ts.termination(self._state, reward=self.non_ne_traj_mult * (-self.ne_reward))
                 else:
