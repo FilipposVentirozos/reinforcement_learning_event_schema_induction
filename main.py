@@ -7,8 +7,8 @@ from tf_agents.agents.ppo.ppo_agent import PPOAgent
 from tf_agents.agents.dqn import dqn_agent
 from tf_agents.policies import random_py_policy, random_tf_policy
 from tf_agents.environments import suite_gym
-
-
+from tf_agents.networks import actor_distribution_network
+from tf_agents.agents.reinforce import reinforce_agent
 # Local
 from archive import embeddings
 # import policy
@@ -40,7 +40,6 @@ agents_per_recipe = 5
 interval = 25
 
 
-
 # Get the Data
 dataset_path = "/home/chroner/PhD_remote/RL_Event_Schema_Induction/data/processed/recipes_0_0_proc"
 dat = DataSet()
@@ -53,7 +52,8 @@ env = sequence_tagger_env.SequenceTaggerEnv(dat.X, dat.label)
 # policy_ = policy.Policy(env.action_spec(), policy="random")
 # policy_ = random_py_policy.RandomPyPolicy(time_step_spec=env.time_step_spec(), action_spec=env.action_spec())
 # TF equivelant
-policy_ = random_tf_policy.RandomTFPolicy(time_step_spec=env.time_step_spec(), action_spec=env.action_spec())
+# Use a custom time_step_spec
+policy_ = random_tf_policy.RandomTFPolicy(time_step_spec=env.time_step_spec_pol(), action_spec=env.action_spec())
 
 # Create PPO agent
 # Time_step_spec, could be provided directly e.g.:
@@ -61,48 +61,66 @@ policy_ = random_tf_policy.RandomTFPolicy(time_step_spec=env.time_step_spec(), a
 #   time_step_spec = ts.time_step_spec(input_tensor_spec)
 optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate)
 
-fc_layer_params = (100, 50)
-action_tensor_spec = tensor_spec.from_spec(env.action_spec())
-num_actions = action_tensor_spec.maximum - action_tensor_spec.minimum + 1
+# fc_layer_params = (100, 50)
+# action_tensor_spec = tensor_spec.from_spec(env.action_spec())
+# num_actions = action_tensor_spec.maximum - action_tensor_spec.minimum + 1
+#
+# # Define a helper function to create Dense layers configured with the right
+# # activation and kernel initializer.
+# def dense_layer(num_units):
+#   return tf.keras.layers.Dense(
+#       num_units,
+#       activation=tf.keras.activations.relu,
+#       kernel_initializer=tf.keras.initializers.VarianceScaling(
+#           scale=2.0, mode='fan_in', distribution='truncated_normal'))
+#
+# # QNetwork consists of a sequence of Dense layers followed by a dense layer
+# # with `num_actions` units to generate one q_value per available action as
+# # it's output.
+# dense_layers = [dense_layer(num_units) for num_units in fc_layer_params]
+# q_values_layer = tf.keras.layers.Dense(
+#     num_actions,
+#     activation=None,
+#     kernel_initializer=tf.keras.initializers.RandomUniform(
+#         minval=-0.03, maxval=0.03),
+#     bias_initializer=tf.keras.initializers.Constant(-0.2))
+# q_net = sequential.Sequential(dense_layers + [q_values_layer])
+#
+# # Example of a time step
+# # TimeStep(
+# # {'discount': BoundedArraySpec(shape=(), dtype=dtype('float32'), name='discount', minimum=0.0, maximum=1.0),
+# #  'observation': BoundedArraySpec(shape=(4,), dtype=dtype('float32'), name='observation', minimum=[-4.8000002e+00 -3.4028235e+38 -4.1887903e-01 -3.4028235e+38], maximum=[4.8000002e+00 3.4028235e+38 4.1887903e-01 3.4028235e+38]),
+# #  'reward': ArraySpec(shape=(), dtype=dtype('float32'), name='reward'),
+# #  'step_type': ArraySpec(shape=(), dtype=dtype('int32'), name='step_type')})
+#
+# print(env.time_step_spec())
+# # ppo = PPOAgent(time_step_spec=env.time_step_spec(), action_spec=env.action_spec(), optimizer=optimizer,
+# #                actor_net=q_net, value_net=q_net) # Have to fix the actor and value network
+# agent = dqn_agent.DqnAgent(
+#     env.time_step_spec(),
+#     env.action_spec(),
+#     q_network=q_net,
+#     optimizer=optimizer)
+#
+# agent.initialize()
 
-# Define a helper function to create Dense layers configured with the right
-# activation and kernel initializer.
-def dense_layer(num_units):
-  return tf.keras.layers.Dense(
-      num_units,
-      activation=tf.keras.activations.relu,
-      kernel_initializer=tf.keras.initializers.VarianceScaling(
-          scale=2.0, mode='fan_in', distribution='truncated_normal'))
+actor_net = actor_distribution_network.ActorDistributionNetwork(
+    env.observation_spec(),
+    env.action_spec(),
+    fc_layer_params=(100,))
 
-# QNetwork consists of a sequence of Dense layers followed by a dense layer
-# with `num_actions` units to generate one q_value per available action as
-# it's output.
-dense_layers = [dense_layer(num_units) for num_units in fc_layer_params]
-q_values_layer = tf.keras.layers.Dense(
-    num_actions,
-    activation=None,
-    kernel_initializer=tf.keras.initializers.RandomUniform(
-        minval=-0.03, maxval=0.03),
-    bias_initializer=tf.keras.initializers.Constant(-0.2))
-q_net = sequential.Sequential(dense_layers + [q_values_layer])
+optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate)
 
-# Example of a time step
-# TimeStep(
-# {'discount': BoundedArraySpec(shape=(), dtype=dtype('float32'), name='discount', minimum=0.0, maximum=1.0),
-#  'observation': BoundedArraySpec(shape=(4,), dtype=dtype('float32'), name='observation', minimum=[-4.8000002e+00 -3.4028235e+38 -4.1887903e-01 -3.4028235e+38], maximum=[4.8000002e+00 3.4028235e+38 4.1887903e-01 3.4028235e+38]),
-#  'reward': ArraySpec(shape=(), dtype=dtype('float32'), name='reward'),
-#  'step_type': ArraySpec(shape=(), dtype=dtype('int32'), name='step_type')})
+train_step_counter = tf.compat.v2.Variable(0)
 
-print(env.time_step_spec())
-# ppo = PPOAgent(time_step_spec=env.time_step_spec(), action_spec=env.action_spec(), optimizer=optimizer,
-#                actor_net=q_net, value_net=q_net) # Have to fix the actor and value network
-agent = dqn_agent.DqnAgent(
+tf_agent = reinforce_agent.ReinforceAgent(
     env.time_step_spec(),
     env.action_spec(),
-    q_network=q_net,
-    optimizer=optimizer)
-
-agent.initialize()
+    actor_network=actor_net,
+    optimizer=optimizer,
+    normalize_returns=True,
+    train_step_counter=train_step_counter)
+tf_agent.initialize()
 
 # env = suite_gym.load("CartPole-v0")
 # train_py_env = suite_gym.load("CartPole-v0")
@@ -117,8 +135,8 @@ agent.initialize()
 
 # Replay buffer
 # Replay buffer, to store variables and train accordingly
-batch_size = 20  # 768
-replay_buffer_capacity = 1_000  #  * batch_size  # Cannot handle too big of capacity locally
+batch_size = 1  # 768
+replay_buffer_capacity = 2_000  #  * batch_size  # Cannot handle too big of capacity locally
 # # Use agent's traj unit for the buffer
 # buffer_unit = (tf.TensorSpec([1], tf.bool, 'action'),  # Binary is 0 or 1
 #                (tf.TensorSpec([5], tf.float32, 'lidar'),
@@ -128,7 +146,7 @@ replay_buffer_capacity = 1_000  #  * batch_size  # Cannot handle too big of capa
 #     capacity=replay_buffer_capacity,
 #     data_spec=agent.collect_data_spec)
 replay_buffer = tf_uniform_replay_buffer.TFUniformReplayBuffer(
-    data_spec=agent.collect_data_spec,  # trajectory item
+    data_spec=tf_agent.collect_data_spec,  # trajectory item
     batch_size=batch_size,
     max_length=replay_buffer_capacity)
 

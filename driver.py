@@ -18,9 +18,10 @@ from tf_agents.environments import py_environment
 from tf_agents.policies import py_policy
 from tf_agents.trajectories import time_step as ts
 from tf_agents.trajectories import trajectory
+from tf_agents.trajectories import policy_step
 
 from tf_agents.typing import types
-
+import tensorflow as tf
 
 class IntervalDriver(driver.Driver, ABC):
     def __init__(
@@ -73,11 +74,12 @@ class IntervalDriver(driver.Driver, ABC):
         interval_number_of_recipes = 0
         # num_agents_per_recipe = 0
         while interval_number_of_recipes < self._interval_number_of_recipes:
+            print("Yeah")
             # Policy
             action_step = self.policy.action(time_step, policy_state)
             next_time_step = self.env.step(action_step.action)
 
-            traj = trajectory.from_transition(time_step, action_step, next_time_step)
+            traj = IntervalDriver.from_transition(time_step, action_step, next_time_step)
             for observer in self._transition_observers:
                 observer((time_step, action_step, next_time_step))
             for observer in self.observers:
@@ -154,3 +156,36 @@ class IntervalDriver(driver.Driver, ABC):
 
     def event_sequence_reward(self):
         pass
+
+    @staticmethod
+    def from_transition(time_step: ts.TimeStep,
+                        action_step: policy_step.PolicyStep,
+                        next_time_step: ts.TimeStep) -> trajectory.Trajectory:
+        """Returns a `Trajectory` given transitions.
+
+        `from_transition` is used by a driver to convert sequence of transitions into
+        a `Trajectory` for efficient storage. Then an agent (e.g.
+        `ppo_agent.PPOAgent`) converts it back to transitions by invoking
+        `to_transition`.
+
+        Note that this method does not add a time dimension to the Tensors in the
+        resulting `Trajectory`. This means that if your transitions don't already
+        include a time dimension, the `Trajectory` cannot be passed to
+        `agent.train()`.
+
+        Args:
+          time_step: A `time_step.TimeStep` representing the first step in a
+            transition.
+          action_step: A `policy_step.PolicyStep` representing actions corresponding
+            to observations from time_step.
+          next_time_step: A `time_step.TimeStep` representing the second step in a
+            transition.
+        """
+        return trajectory.Trajectory(
+            step_type=tf.reshape(time_step.step_type, (1,)),
+            observation=time_step.observation,
+            action=tf.reshape(action_step.action, (1,)),
+            policy_info=action_step.info,
+            next_step_type=tf.reshape(next_time_step.step_type, (1,)),
+            reward=tf.reshape(next_time_step.reward, (1,)),
+            discount=tf.reshape(next_time_step.discount, (1,)))
