@@ -13,6 +13,7 @@ logger = logging.getLogger('sequence_tagger_env')
 logger.addHandler(logging.StreamHandler())
 logger.setLevel(logging.INFO)
 
+
 class EndOfDataSet(Exception):
     """ Raise when the end of Dataset
 
@@ -72,7 +73,10 @@ class SequenceTaggerEnv(PyEnvironment, ABC):
                                                    maximum=X_train.max(axis=0).max(axis=0),
                                                    dtype=tf.float32,
                                                    name="observation")
-        self.empty_observation = tf.convert_to_tensor(np.zeros(shape=X_train[0, 0, :].shape,
+        # self.empty_observation = tf.convert_to_tensor(np.zeros(shape=X_train[0, 0, :].shape,
+        #                                                        dtype=X_train.dtype),
+        #                                               dtype=tf.float32)
+        self.empty_observation = tf.convert_to_tensor(np.zeros(shape=self.obs_shape_,
                                                                dtype=X_train.dtype),
                                                       dtype=tf.float32)
 
@@ -83,14 +87,14 @@ class SequenceTaggerEnv(PyEnvironment, ABC):
         self.ne_reward = ne_reward
         self.non_ne_traj_mult = non_ne_traj_mult
         # Count the recipes for env reset and also to establish posterior sequence reward
-        self.rec_count = False #0  # It was -1 # Lead to produce error if not used
+        self.rec_count = -1  #0  # False  #0  # It was -1 # Lead to produce error if not used
         # self.seed_buffer = list()
         self.token_trajectory = list()
         # Sample an id to start with
 
         self.seed = -1  # It will increment to 0 index
 
-        self.recipe_length = self.get_recipe_length()
+        self.recipe_length = False
 
         # self.set_seed_sequential()  # Is the self._reset()
         self.episode_step = 0  # Episode step, resets every episode
@@ -120,6 +124,9 @@ class SequenceTaggerEnv(PyEnvironment, ABC):
         # py_replay_buffer = py_uniform_replay_buffer.PyUniformReplayBuffer(
         #     capacity=replay_buffer_capacity,
         #     data_spec=tensor_spec.to_nest_array_spec(buffer_unit))
+
+    def set_rec_count(self, rec_count):
+        self.rec_count = rec_count
 
     def reward_spec(self) -> types.NestedTensorSpec:
         """Defines the rewards that are returned by `step()`.
@@ -161,27 +168,29 @@ class SequenceTaggerEnv(PyEnvironment, ABC):
             return len(self.X_train[self.rec_count, :, 0])
         return np.argwhere(self.X_train[self.rec_count, :, 0] == 0)[0][0]
 
-    def set_seed_sequential(self, rec_count=0):
+    def set_seed_sequential(self):
         """ Set the seed one after one, no matter is an NE or not
 
         :return:
         """
+        logger.info("\nSet seed.")
         try:
             self.seed += 1
+            logger.info("Seed is: " + str(self.seed))
             self.id = self.seed
-            try:
-                self._state = tf.reshape(self.X_train[self.rec_count, self.id, :], self.obs_shape_)
-            except ValueError:
-                self.rec_count = rec_count
-                self._state = tf.reshape(self.X_train[self.rec_count, self.id, :], self.obs_shape_)
+            # try:
+            # except ValueError as e:
+            #     logger.error("Need to set a " + str(e))
+
+            if self.seed >= self.recipe_length or not self.recipe_length:
+                return self.next_recipe()
+            self._state = tf.reshape(self.X_train[self.rec_count, self.id, :], self.obs_shape_)
             # self._state = self.X_train[self.rec_count, self.id, :]
             # Re-initialise inside recipe counters
             self._maxed_increment = self.maxed_increment()  # Get the farthest away token for the end of episode
             self.balance = 0
             self.increment = 0
 
-            if self.seed > self.recipe_length:
-                self.next_recipe()
             # if np.sum(self._state) == 0:  # Have exhausted the tokens on the current recipe, move to next recipe,
             #     # 0 would denote an empty cell
             #     self.next_recipe()
@@ -194,13 +203,14 @@ class SequenceTaggerEnv(PyEnvironment, ABC):
             #     return ts.restart(self._state, -self.ne_reward)
             return ts.restart(self._state)
 
-        except IndexError:
+        except (IndexError, tf.errors.InvalidArgumentError):
             try:
                 assert self.X_train[self.rec_count, 0, :]
-                raise EndOfDataSet
-            except IndexError:  # If the error is not caused by end of data, then the index means we should go to the
+                # raise EndOfDataSet
+            except (IndexError, tf.errors.InvalidArgumentError):  # If the error is not caused by end of data, then the index means we should go to the
                 # next recipe
-                self.next_recipe()
+                raise EndOfDataSet
+                # return self.next_recipe()
 
     def set_id_zig_zag(self):
 
@@ -233,18 +243,19 @@ class SequenceTaggerEnv(PyEnvironment, ABC):
 
     def next_recipe(self):
         self.rec_count += 1  # Go to next recipe
-        self.seed = 0  # Start from the first token
+        self.seed = -1  # Start from the first token
         self.recipe_length = self.get_recipe_length()
         self.recipe_number_of_NEs_estimate()  # For posterior reward
+        logger.info("Next recipe...")
+        return self.set_seed_sequential()
 
-        self._reset()
-
-    def _reset(self, *args, **kwargs):
+    def _reset(self):
         """ Go to the next token and start exploring. If no tokens left, then go to the next recipe.
 
         :return:
         """
-        return self.set_seed_sequential(*args, **kwargs)
+        logger.info("Resetting...")
+        return self.set_seed_sequential()
 
     def _step(self, action: int):
         """
@@ -267,7 +278,7 @@ class SequenceTaggerEnv(PyEnvironment, ABC):
         # self._state = self.X_train[self.id[self.episode_step]]  # Update state with new datapoint
         # Do it bit inversely, calculate the new state first
         prev_id = self.id
-        reward = None
+        reward = None  # Safeguard
         self.episode_step += 1
         # Update self.id to get the new state
         try:
@@ -279,26 +290,32 @@ class SequenceTaggerEnv(PyEnvironment, ABC):
             #     self.set_seed_sequential()
             # except EndOfDataSet:
         try:
+            logger.info("Recipe: " + str(self.rec_count) + " with id: " + str(self.id))
             self._state = tf.reshape(self.X_train[self.rec_count, self.id, :], self.obs_shape_)  # self.X_train[self.rec_count, self.id, :]
             # self._state = self.X_train[self.rec_count, self.id, :]  # self.X_train[self.rec_count, self.id, :]
         # Due to being out of bounds
-        except IndexError:
+        except (IndexError, tf.errors.InvalidArgumentError):  # ToDo Update Exception to TF
             self._state = self.empty_observation
 
         # try:
         try:
             # The label of the previous state where the action was taken upon
-            env_action = self.y_train[self.rec_count, prev_id]
+            env_action = self.y_train[self.rec_count, prev_id].numpy()
         # Due to being out of bounds
-        except IndexError:
+        except (IndexError,  tf.errors.InvalidArgumentError):
             # env_action = 0
             env_action = -1
         # Not an NE Reward
-        print("selected: "+ str(action.numpy()))
-        print("true: " + str(env_action.numpy()))
-        if action.numpy() == env_action.numpy():
+        try:
+            logger.info("selected: " + str(action.numpy()[0]))
+            action = action.numpy()[0]
+        except IndexError:
+            logger.info("selected: " + str(action.numpy()))
+            action = action.numpy()
+        logger.info("true: " + str(env_action))
+        if action.astype(np.int8) == env_action:
             reward = self.ne_reward
-        elif action.numpy() == 4:  # The choice action to stop the episode
+        elif action == 4:  # The choice action to stop the episode
             if self.y_train[self.rec_count, self.seed].numpy() > 0:  # An NE
                 return ts.termination(self._state, reward=self.non_ne_traj_mult * (-self.ne_reward))
             else:
@@ -308,15 +325,18 @@ class SequenceTaggerEnv(PyEnvironment, ABC):
         # except IndexError:
         #     reward = 0
 
-        # Set continuous negative reward if non-NE seed
+        # Set continuous negative reward if non-NE seed, for every time the agent does not choose to stop
         if self.y_train[self.rec_count, self.seed].numpy() == 0:
-            return ts.transition(self._state, reward=self.non_ne_traj_mult * (-self.ne_reward))
+            if self._episode_ended:
+                return ts.termination(self._state, reward=self.non_ne_traj_mult * (-self.ne_reward))
+            else:
+                return ts.transition(self._state, reward=self.non_ne_traj_mult * (-self.ne_reward))
 
         if self._episode_ended:
             return ts.termination(self._state, reward)
         else:
-            print(self._state)
-            print(reward)
+            # print(self._state)
+            # print(reward)
             return ts.transition(self._state, reward)
 
         # https://github.com/tensorflow/agents/blob/master/docs/tutorials/2_environments_tutorial.ipynb
@@ -333,7 +353,7 @@ class SequenceTaggerEnv(PyEnvironment, ABC):
         Here we take this assumption and we divide by the number of NEs to estimate how many NEs an event should have."""
         NE_sum = 0
         verb_sum = 0
-        for k, v in dict(zip(*np.unique(self.y_train[self.rec_count, :], return_counts=True))):
+        for k, v in dict(zip(*np.unique(self.y_train[self.rec_count, :].numpy(), return_counts=True))).items():
             if k > 0:
                 NE_sum += v
             if k == 1:

@@ -59,3 +59,6 @@ how to start and stop in one step
 
 Check if can read from replay_buffer
 Check the actions, how is -1 treated
+
+Fix agent or change
+Check trajs

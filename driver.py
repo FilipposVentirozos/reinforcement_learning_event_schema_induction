@@ -22,6 +22,7 @@ from tf_agents.trajectories import policy_step
 
 from tf_agents.typing import types
 import tensorflow as tf
+from sequence_tagger_env import EndOfDataSet
 
 
 class IntervalDriver(driver.Driver, ABC):
@@ -51,7 +52,7 @@ class IntervalDriver(driver.Driver, ABC):
         self._episode_buffer_reset()
         self._recipe_buffer_reset()  # Or have a list
         # Count the recipes to apply reward
-        self.rec_count = rec_count
+        self.env.set_rec_count(rec_count)
 
     def _episode_buffer_reset(self):
         self._episode_buffer = self._buffer_template
@@ -72,13 +73,14 @@ class IntervalDriver(driver.Driver, ABC):
         :return:
         """
         # time_step = self.env.id  # This is the token ID in a recipe, gets zero after each recipe
-        time_step = self.env.reset(self.rec_count)  # Check that
+        time_step = self.env.reset()  # Check that
         policy_state = self.policy.get_initial_state(self.env.batch_size)
         interval_number_of_recipes = 0
         # num_agents_per_recipe = 0
         prev_recipe_id = None
         while interval_number_of_recipes < self._interval_number_of_recipes:
             # Policy
+            # [print(i.shape) for i in tf.nest.flatten(time_step)]
             action_step = self.policy.action(time_step, policy_state)
             next_time_step = self.env.step(action_step.action)
 
@@ -102,7 +104,10 @@ class IntervalDriver(driver.Driver, ABC):
             self._episode_buffer.add_batch(traj)
 
             if traj.is_boundary():  # End of episode
-                self.env.reset()
+                try:
+                    self.env.reset()
+                except EndOfDataSet:
+                    break
                 interval_number_of_recipes += 1
                 # Count recipes
                 if prev_recipe_id != self.env.rec_count:
@@ -173,28 +178,30 @@ class IntervalDriverEval(IntervalDriver):
             self,
             env: py_environment.PyEnvironment,
             policy: py_policy.PyPolicy,
-            number_of_episodes: Optional[types.Int] = 10,  # Each recipe has many episodes
-            recipe_idx: Optional[types.Int] = 0):
-        super(IntervalDriverEval, self).__init__(env, policy)
-        self.number_of_episodes = number_of_episodes
-        self.recipe_idx = recipe_idx
+            # number_of_episodes: Optional[types.Int] = 10,  # Each recipe has many episodes
+            rec_count: Optional[types.Int] = 0,
+            interval_number_of_recipes: Optional[types.Int] = np.inf,
+    ):
+        super(IntervalDriverEval, self).__init__(env=env, policy=policy, buffer_observer=None, rec_count=rec_count,
+                                                 interval_number_of_recipes=interval_number_of_recipes)
+        # self.number_of_episodes = number_of_episodes
 
     def run(self):
         """ Get the Eval from the start for now
 
         :return:
         """
-        time_step = self.env.reset(self.recipe_idx)  # Check that
+        time_step = self.env.reset()
         policy_state = self.policy.get_initial_state(self.env.batch_size)
         interval_number_of_recipes = 0
         # num_agents_per_recipe = 0
         num_episodes, total_return = 0, 0
+        prev_recipe_id = None
         while interval_number_of_recipes < self._interval_number_of_recipes:
             action_step = self.policy.action(time_step, policy_state)
             next_time_step = self.env.step(action_step.action)
-            total_return += next_time_step
-            traj = from_transition(time_step, action_step, next_time_step)
-            if traj.is_boundary():  # End of episode
+            total_return += next_time_step.reward.numpy()
+            if next_time_step.is_last().numpy():  # End of episode
                 self.env.reset()
                 num_episodes += 1
                 # Count recipes
@@ -202,8 +209,7 @@ class IntervalDriverEval(IntervalDriver):
                     interval_number_of_recipes += 1
                     prev_recipe_id = self.env.rec_count
 
-        return total_return / num_episodes
-
+        return total_return / num_episodes, num_episodes
 
 
 def from_transition(time_step: ts.TimeStep,

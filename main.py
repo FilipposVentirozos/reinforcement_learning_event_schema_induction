@@ -28,7 +28,7 @@ batch_size = 64  # @param {type:"integer"}
 learning_rate = 1e-3  # @param {type:"number"}
 log_interval = 200  # @param {type:"integer"}
 
-num_eval_episodes = 10  # @param {type:"integer"}
+num_eval_recipes = 2  # @param {type:"integer"}
 eval_interval = 1000  # @param {type:"integer"}
 
 # Domain Specific Hyper-Parameters
@@ -151,7 +151,7 @@ replay_buffer = tf_uniform_replay_buffer.TFUniformReplayBuffer(
     batch_size=batch_size,
     max_length=replay_buffer_capacity)
 
-driver = IntervalDriver(env=env, policy=policy_, buffer_observer=replay_buffer)
+driver = IntervalDriver(env=env, policy=policy_, buffer_observer=replay_buffer, rec_count=-1)
 
 # (Optional) Optimize by wrapping some of the code in a graph using TF function.
 tf_agent.train = common.function(tf_agent.train)
@@ -160,14 +160,17 @@ tf_agent.train = common.function(tf_agent.train)
 tf_agent.train_step_counter.assign(0)
 
 # Evaluate the agent's policy once before training.
-avg_return = IntervalDriverEval(env, tf_agent.policy, num_eval_episodes)
+eval_env = sequence_tagger_env.SequenceTaggerEnv(dat.X, dat.label)
+avg_return = IntervalDriverEval(env=eval_env, policy=tf_agent.policy, rec_count=-1,
+                                interval_number_of_recipes=num_eval_recipes).run()
 returns = [avg_return]
 
 for _ in range(num_iterations):
     driver.run()
     # loss_info = agent.train(replay_buffer.gather_all())
-    loss_info = tf_agent.train(replay_buffer.as_dataset(single_deterministic_pass=True))
-    train_loss = tf_agent.train(loss_info)
+    # experience = replay_buffer.as_dataset(single_deterministic_pass=True)
+    experience = replay_buffer.gather_all()
+    train_loss = tf_agent.train(experience)
     replay_buffer.clear()
     # regret_values.append(regret_metric.result())
     step = tf_agent.train_step_counter.numpy()
@@ -175,11 +178,14 @@ for _ in range(num_iterations):
         print('step = {0}: loss = {1}'.format(step, train_loss.loss))
 
     if step % eval_interval == 0:
-        avg_return = IntervalDriverEval(env, tf_agent.policy, num_eval_episodes)
+        eval_env = sequence_tagger_env.SequenceTaggerEnv(dat.X, dat.label)
+        avg_return = IntervalDriverEval(env=eval_env, policy=tf_agent.policy, rec_count=-1,
+                                        interval_number_of_recipes=num_eval_recipes).run()
         print('step = {0}: Average Return = {1}'.format(step, avg_return))
         returns.append(avg_return)
 
-print(returns)
+for i in returns:
+    print(i)
 # # Data Collection
 # # @test {"skip": true}
 # def collect_step(environment, policy, buffer):
