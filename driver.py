@@ -23,6 +23,7 @@ from tf_agents.trajectories import policy_step
 from tf_agents.typing import types
 import tensorflow as tf
 
+
 class IntervalDriver(driver.Driver, ABC):
     def __init__(
             self,
@@ -33,14 +34,16 @@ class IntervalDriver(driver.Driver, ABC):
             observers: Sequence[Callable[[trajectory.Trajectory], Any]] = None,
             transition_observers: Optional[Sequence[Callable[[trajectory.Transition],
                                                              Any]]] = None,
-            interval_number_of_recipes: Optional[types.Int] = None):
+            interval_number_of_recipes: Optional[types.Int] = np.inf,  # Number of recipes to run the driver
+            rec_count: Optional[types.Int] = 0  # Start from a latter recipe id
+    ):
 
         super(IntervalDriver, self).__init__(env, policy, observers, transition_observers)
 
         # Deprecated, A compulsory number of agents per recipe that is pre-defined
         # self._agents_per_recipe = agents_per_recipe
         # The number of interval
-        self._interval_number_of_recipes = interval_number_of_recipes or np.inf
+        self._interval_number_of_recipes = interval_number_of_recipes
         # Compulsory buffer
         self._buffer_observer = buffer_observer
         # Temporary buffer for each recipe
@@ -48,7 +51,7 @@ class IntervalDriver(driver.Driver, ABC):
         self._episode_buffer_reset()
         self._recipe_buffer_reset()  # Or have a list
         # Count the recipes to apply reward
-        self.rec_count = 0
+        self.rec_count = rec_count
 
     def _episode_buffer_reset(self):
         self._episode_buffer = self._buffer_template
@@ -69,17 +72,17 @@ class IntervalDriver(driver.Driver, ABC):
         :return:
         """
         # time_step = self.env.id  # This is the token ID in a recipe, gets zero after each recipe
-        time_step = self.env.reset()  # Check that
+        time_step = self.env.reset(self.rec_count)  # Check that
         policy_state = self.policy.get_initial_state(self.env.batch_size)
         interval_number_of_recipes = 0
         # num_agents_per_recipe = 0
+        prev_recipe_id = None
         while interval_number_of_recipes < self._interval_number_of_recipes:
-            print("Yeah")
             # Policy
             action_step = self.policy.action(time_step, policy_state)
             next_time_step = self.env.step(action_step.action)
 
-            traj = IntervalDriver.from_transition(time_step, action_step, next_time_step)
+            traj = from_transition(time_step, action_step, next_time_step)
             for observer in self._transition_observers:
                 observer((time_step, action_step, next_time_step))
             for observer in self.observers:
@@ -99,24 +102,31 @@ class IntervalDriver(driver.Driver, ABC):
             self._episode_buffer.add_batch(traj)
 
             if traj.is_boundary():  # End of episode
-                # Apply the NE reward estimate
-                # ToDo Get the number of actions
-                trajs = self._episode_buffer.as_dataset(single_deterministic_pass=True)
-                # ToDo Apply the estimate on the Positive rewards
-                # ToDo call reset from environemnt
-                reward = self.episodic_verb_reward()
-                # ToDo Append to recipe buffer
-                self._recipe_buffer.add_batch(trajs)
-                # Re-Init episode buffer
-                self._recipe_buffer_reset()
+                self.env.reset()
+                interval_number_of_recipes += 1
+                # Count recipes
+                if prev_recipe_id != self.env.rec_count:
+                    interval_number_of_recipes +=1
+                    prev_recipe_id = self.env.rec_count
 
-                # Is it the end of recipe?, should this be done upon greedy policy?
-                if self.rec_count < self.env.rec_count:
-                    self.rec_count = self.env.rec_count
-                    # Apply the Convolutional rewards, could be from list of episode buffers
-                    self._recipe_buffer.as_dataset(single_deterministic_pass=True)
-                    # Calculate convolution reward
-                    # Reset recipe buffer or liste
+                # # Apply the NE reward estimate
+                # # ToDo Get the number of actions
+                # for traj, _ in self._episode_buffer.as_dataset(single_deterministic_pass=True):
+                #     self._recipe_buffer.add_batch(traj)
+                # # ToDo Apply the estimate on the Positive rewards
+                # # ToDo call reset from environemnt
+                # reward = self.episodic_verb_reward()
+                # # ToDo Append to recipe buffer
+                # # Re-Init episode buffer
+                # self._recipe_buffer_reset()
+
+                # # Is it the end of recipe?, should this be done upon greedy policy?
+                # if self.rec_count < self.env.rec_count:
+                #     self.rec_count = self.env.rec_count
+                #     # Apply the Convolutional rewards, could be from list of episode buffers
+                #     self._recipe_buffer.as_dataset(single_deterministic_pass=True)
+                #     # Calculate convolution reward
+                #     # Reset recipe buffer or liste
             # # Deprecated
             # # Count the agents per recipe
             # num_agents_per_recipe += np.sum(traj.is_boundary())
@@ -137,7 +147,7 @@ class IntervalDriver(driver.Driver, ABC):
             time_step = next_time_step
             policy_state = action_step.state
         # Calculate posterior rewards
-        self.event_sequence_reward()
+        # self.event_sequence_reward()
 
         return time_step, self._interval_number_of_recipes, policy_state
 
@@ -157,35 +167,73 @@ class IntervalDriver(driver.Driver, ABC):
     def event_sequence_reward(self):
         pass
 
-    @staticmethod
-    def from_transition(time_step: ts.TimeStep,
-                        action_step: policy_step.PolicyStep,
-                        next_time_step: ts.TimeStep) -> trajectory.Trajectory:
-        """Returns a `Trajectory` given transitions.
 
-        `from_transition` is used by a driver to convert sequence of transitions into
-        a `Trajectory` for efficient storage. Then an agent (e.g.
-        `ppo_agent.PPOAgent`) converts it back to transitions by invoking
-        `to_transition`.
+class IntervalDriverEval(IntervalDriver):
+    def __init__(
+            self,
+            env: py_environment.PyEnvironment,
+            policy: py_policy.PyPolicy,
+            number_of_episodes: Optional[types.Int] = 10,  # Each recipe has many episodes
+            recipe_idx: Optional[types.Int] = 0):
+        super(IntervalDriverEval, self).__init__(env, policy)
+        self.number_of_episodes = number_of_episodes
+        self.recipe_idx = recipe_idx
 
-        Note that this method does not add a time dimension to the Tensors in the
-        resulting `Trajectory`. This means that if your transitions don't already
-        include a time dimension, the `Trajectory` cannot be passed to
-        `agent.train()`.
+    def run(self):
+        """ Get the Eval from the start for now
 
-        Args:
-          time_step: A `time_step.TimeStep` representing the first step in a
-            transition.
-          action_step: A `policy_step.PolicyStep` representing actions corresponding
-            to observations from time_step.
-          next_time_step: A `time_step.TimeStep` representing the second step in a
-            transition.
+        :return:
         """
-        return trajectory.Trajectory(
-            step_type=tf.reshape(time_step.step_type, (1,)),
-            observation=time_step.observation,
-            action=tf.reshape(action_step.action, (1,)),
-            policy_info=action_step.info,
-            next_step_type=tf.reshape(next_time_step.step_type, (1,)),
-            reward=tf.reshape(next_time_step.reward, (1,)),
-            discount=tf.reshape(next_time_step.discount, (1,)))
+        time_step = self.env.reset(self.recipe_idx)  # Check that
+        policy_state = self.policy.get_initial_state(self.env.batch_size)
+        interval_number_of_recipes = 0
+        # num_agents_per_recipe = 0
+        num_episodes, total_return = 0, 0
+        while interval_number_of_recipes < self._interval_number_of_recipes:
+            action_step = self.policy.action(time_step, policy_state)
+            next_time_step = self.env.step(action_step.action)
+            total_return += next_time_step
+            traj = from_transition(time_step, action_step, next_time_step)
+            if traj.is_boundary():  # End of episode
+                self.env.reset()
+                num_episodes += 1
+                # Count recipes
+                if prev_recipe_id != self.env.rec_count:
+                    interval_number_of_recipes += 1
+                    prev_recipe_id = self.env.rec_count
+
+        return total_return / num_episodes
+
+
+
+def from_transition(time_step: ts.TimeStep,
+                    action_step: policy_step.PolicyStep,
+                    next_time_step: ts.TimeStep) -> trajectory.Trajectory:
+    """Returns a `Trajectory` given transitions.
+
+    `from_transition` is used by a driver to convert sequence of transitions into
+    a `Trajectory` for efficient storage. Then an agent (e.g.
+    `ppo_agent.PPOAgent`) converts it back to transitions by invoking
+    `to_transition`.
+
+    Note that this method does not add a time dimension to the Tensors in the
+    resulting `Trajectory`. This means that if your transitions don't already
+    include a time dimension, the `Trajectory` cannot be passed to
+    `agent.train()`.
+
+    Args:
+      time_step: A `time_step.TimeStep` representing the first step in a
+        transition.
+      action_step: A `policy_step.PolicyStep` representing actions corresponding
+        to observations from time_step.
+      next_time_step: A `time_step.TimeStep` representing the second step in a
+        transition.
+    """
+    return trajectory.Trajectory(
+        step_type=tf.reshape(time_step.step_type, (1,)),
+        observation=time_step.observation,
+        action=tf.reshape(action_step.action, (1,)),
+        policy_info=action_step.info,
+        next_step_type=tf.reshape(next_time_step.step_type, (1,)),
+        reward=tf.reshape(next_time_step.reward, (1,)),
+        discount=tf.reshape(next_time_step.discount, (1,)))

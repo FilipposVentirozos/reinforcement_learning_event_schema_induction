@@ -14,10 +14,11 @@ from archive import embeddings
 # import policy
 import sequence_tagger_env
 from dataset import DataSet
-from driver import IntervalDriver
+from driver import IntervalDriver, IntervalDriverEval
+from tf_agents.utils import common
 
 # Hyper-Parameters
-num_iterations = 20000  # @param {type:"integer"}
+num_iterations = 100  # @param {type:"integer"}
 
 initial_collect_steps = 100  # @param {type:"integer"}
 collect_steps_per_iteration = 1  # @param {type:"integer"}
@@ -152,13 +153,33 @@ replay_buffer = tf_uniform_replay_buffer.TFUniformReplayBuffer(
 
 driver = IntervalDriver(env=env, policy=policy_, buffer_observer=replay_buffer)
 
+# (Optional) Optimize by wrapping some of the code in a graph using TF function.
+tf_agent.train = common.function(tf_agent.train)
+
+# Reset the train step
+tf_agent.train_step_counter.assign(0)
+
+# Evaluate the agent's policy once before training.
+avg_return = IntervalDriverEval(env, tf_agent.policy, num_eval_episodes)
+returns = [avg_return]
+
 for _ in range(num_iterations):
     driver.run()
     # loss_info = agent.train(replay_buffer.gather_all())
-    # replay_buffer.clear()
+    loss_info = tf_agent.train(replay_buffer.as_dataset(single_deterministic_pass=True))
+    train_loss = tf_agent.train(loss_info)
+    replay_buffer.clear()
     # regret_values.append(regret_metric.result())
+    step = tf_agent.train_step_counter.numpy()
+    if step % log_interval == 0:
+        print('step = {0}: loss = {1}'.format(step, train_loss.loss))
 
+    if step % eval_interval == 0:
+        avg_return = IntervalDriverEval(env, tf_agent.policy, num_eval_episodes)
+        print('step = {0}: Average Return = {1}'.format(step, avg_return))
+        returns.append(avg_return)
 
+print(returns)
 # # Data Collection
 # # @test {"skip": true}
 # def collect_step(environment, policy, buffer):
