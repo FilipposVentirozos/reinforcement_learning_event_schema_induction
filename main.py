@@ -16,6 +16,7 @@ import sequence_tagger_env
 from dataset import DataSet
 from driver import IntervalDriver, IntervalDriverEval
 from tf_agents.utils import common
+import tqdm
 
 print("Num GPUs Available: ", len(tf.config.list_physical_devices('GPU')))
 
@@ -25,7 +26,7 @@ else:
     print("Please install GPU version of TF")
 
 # Hyper-Parameters
-num_iterations = 50  # @param {type:"integer"}
+num_iterations = 10  # @param {type:"integer"}
 
 initial_collect_steps = 100  # @param {type:"integer"}
 collect_steps_per_iteration = 1  # @param {type:"integer"}
@@ -36,7 +37,7 @@ learning_rate = 1e-3  # @param {type:"number"}
 log_interval = 200  # @param {type:"integer"}
 
 num_eval_recipes = 2  # @param {type:"integer"}
-eval_interval = 10  # @param {type:"integer"}
+eval_interval = 20  # @param {type:"integer"}
 
 # Domain Specific Hyper-Parameters
 
@@ -61,13 +62,14 @@ env = sequence_tagger_env.SequenceTaggerEnv(dat.X, dat.label)
 # policy_ = random_py_policy.RandomPyPolicy(time_step_spec=env.time_step_spec(), action_spec=env.action_spec())
 # TF equivelant
 # Use a custom time_step_spec
-policy_ = random_tf_policy.RandomTFPolicy(time_step_spec=env.time_step_spec_pol(), action_spec=env.action_spec())
+# policy_ = random_tf_policy.RandomTFPolicy(time_step_spec=env.time_step_spec_pol(), action_spec=env.action_spec())
+# policy_ = random_tf_policy.RandomTFPolicy(time_step_spec=env.time_step_spec_pol(), action_spec=env.action_spec())
 
 # Create PPO agent
 # Time_step_spec, could be provided directly e.g.:
 #   input_tensor_spec = tensor_spec.TensorSpec((4,), tf.float32)
 #   time_step_spec = ts.time_step_spec(input_tensor_spec)
-optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate)
+# optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate)
 
 # fc_layer_params = (100, 50)
 # action_tensor_spec = tensor_spec.from_spec(env.action_spec())
@@ -119,7 +121,7 @@ actor_net = actor_distribution_network.ActorDistributionNetwork(
 
 # optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate)
 # tf.keras.optimizers.Adam(learning_rate=learning_rate)
-optimizer = tf.compat.v1.train.AdamOptimizer(learning_rate=0.0001)
+optimizer = tf.compat.v1.train.AdamOptimizer(learning_rate=learning_rate)
 
 train_step_counter = tf.compat.v2.Variable(0)
 
@@ -132,6 +134,7 @@ tf_agent = reinforce_agent.ReinforceAgent(
     train_step_counter=train_step_counter)
 tf_agent.initialize()
 
+policy_ = tf_agent.collect_policy
 # env = suite_gym.load("CartPole-v0")
 # train_py_env = suite_gym.load("CartPole-v0")
 # from tf_agents.environments import tf_py_environment
@@ -173,29 +176,30 @@ eval_env = sequence_tagger_env.SequenceTaggerEnv(dat.X, dat.label)
 avg_return = IntervalDriverEval(env=eval_env, policy=tf_agent.policy, rec_count=-1,
                                 interval_number_of_recipes=num_eval_recipes).run()
 returns = [avg_return]
-
-for _ in range(num_iterations):
+for _ in tqdm.tqdm(range(num_iterations)):
     env.set_rec_count(-1)
+    replay_buffer.clear()
     driver.run()
     # loss_info = agent.train(replay_buffer.gather_all())
+
     # experience = replay_buffer.as_dataset(single_deterministic_pass=True)
     experience = replay_buffer.gather_all()
     train_loss = tf_agent.train(experience)
-    replay_buffer.clear()
     # regret_values.append(regret_metric.result())
     step = tf_agent.train_step_counter.numpy()
     if step % log_interval == 0:
         print('step = {0}: loss = {1}'.format(step, train_loss.loss))
 
-    if step % eval_interval == 0:
-        eval_env = sequence_tagger_env.SequenceTaggerEnv(dat.X, dat.label)
-        avg_return = IntervalDriverEval(env=eval_env, policy=tf_agent.policy, rec_count=-1,
-                                        interval_number_of_recipes=num_eval_recipes).run()
-        print('step = {0}: Average Return = {1}'.format(step, avg_return))
-        returns.append(avg_return)
+    # if step % eval_interval == 0:
+    eval_env = sequence_tagger_env.SequenceTaggerEnv(dat.X, dat.label)
+    avg_return = IntervalDriverEval(env=eval_env, policy=tf_agent.policy, rec_count=-1,
+                                    interval_number_of_recipes=num_eval_recipes).run()
+    print('step = {0}: Average Return = {1}'.format(step, avg_return))
+    returns.append(avg_return)
 
 for i in returns:
     print(i)
+
 # # Data Collection
 # # @test {"skip": true}
 # def collect_step(environment, policy, buffer):

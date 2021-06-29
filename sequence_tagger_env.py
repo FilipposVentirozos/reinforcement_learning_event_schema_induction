@@ -290,19 +290,26 @@ class SequenceTaggerEnv(PyEnvironment, ABC):
             # try:
             #     self.set_seed_sequential()
             # except EndOfDataSet:
-        try:
-            logger.info("Recipe: " + str(self.rec_count) + " with id: " + str(self.id))
-            self._state = tf.reshape(self.X_train[self.rec_count, self.id, :], self.obs_shape_)  # self.X_train[self.rec_count, self.id, :]
-            env_action = self.y_train[self.rec_count, prev_id].numpy()
-            # self._state = self.X_train[self.rec_count, self.id, :]  # self.X_train[self.rec_count, self.id, :]
-        # Due to being out of bounds
-        except (IndexError, tf.errors.InvalidArgumentError):
+        # Provide the new step
+        if self.id < 0:
             self._state = self.empty_observation
-            env_action = -1
+        else:
+            try:
+                self._state = tf.reshape(self.X_train[self.rec_count, self.id, :], self.obs_shape_)
+            # Due to being out of bounds
+            except (IndexError, tf.errors.InvalidArgumentError):
+                self._state = self.empty_observation
+        # Evaluate current action
         if prev_id < 0:
-            self._state = self.empty_observation
             env_action = -1
-            # Not an NE Reward
+        else:
+            try:
+                env_action = self.y_train[self.rec_count, prev_id].numpy()
+            # Due to being out of bounds
+            except (IndexError, tf.errors.InvalidArgumentError):
+                env_action = -1
+        logger.info("Recipe: " + str(self.rec_count) + " with prev_id: " + str(prev_id))
+        logger.info("State Sum (id: " + str(self.id) + "): " + str(self._state.numpy().sum()))
         try:
             logger.info("selected: " + str(action.numpy()[0]))
             action = action.numpy()[0]
@@ -311,15 +318,20 @@ class SequenceTaggerEnv(PyEnvironment, ABC):
             action = action.numpy()
         logger.info("true: " + str(env_action))
         if env_action == -1 and action == 5:
+            logger.info('\033[;42m   \033[0m')
             reward = self.ne_reward
         elif action.astype(np.int8) == env_action:
+            logger.info('\033[;42m   \033[0m')
             reward = self.ne_reward
         elif action == 4:  # The choice action to stop the episode
             if self.y_train[self.rec_count, self.seed].numpy() > 0:  # An NE
+                logger.info('\033[;42m   \033[0m')
                 return ts.termination(self._state, reward=self.non_ne_traj_mult * (-self.ne_reward))
             else:
+                logger.info('\033[;41m   \033[0m')
                 return ts.termination(self._state, reward=self.non_ne_traj_mult * self.ne_reward)
         else:
+            logger.info('\033[;41m   \033[0m')
             reward = -self.ne_reward
         # except IndexError:
         #     reward = 0
@@ -327,8 +339,10 @@ class SequenceTaggerEnv(PyEnvironment, ABC):
         # Set continuous negative reward if non-NE seed, for every time the agent does not choose to stop
         if self.y_train[self.rec_count, self.seed].numpy() == 0:
             if self._episode_ended:
+                # logger.info('\033[;41m   \033[0m')
                 return ts.termination(self._state, reward=self.non_ne_traj_mult * (-self.ne_reward))
             else:
+                # logger.info('\033[;41m   \033[0m')
                 return ts.transition(self._state, reward=self.non_ne_traj_mult * (-self.ne_reward))
 
         if self._episode_ended:

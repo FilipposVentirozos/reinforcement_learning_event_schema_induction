@@ -23,7 +23,7 @@ from tf_agents.trajectories import policy_step
 from tf_agents.typing import types
 import tensorflow as tf
 from sequence_tagger_env import EndOfDataSet
-
+from collections import defaultdict
 
 class IntervalDriver(driver.Driver, ABC):
     def __init__(
@@ -83,7 +83,7 @@ class IntervalDriver(driver.Driver, ABC):
             # [print(i.shape) for i in tf.nest.flatten(time_step)]
             action_step = self.policy.action(time_step, policy_state)
             next_time_step = self.env.step(action_step.action)
-
+            self.env._episode_ended = False
             traj = from_transition(time_step, action_step, next_time_step)
             for observer in self._transition_observers:
                 observer((time_step, action_step, next_time_step))
@@ -103,7 +103,7 @@ class IntervalDriver(driver.Driver, ABC):
 
             self._episode_buffer.add_batch(traj)
 
-            if traj.is_boundary():  # End of episode
+            if traj.is_boundary():  # End of episode, evaluates the time_step not the next_time_step
                 try:
                     self.env.reset()
                 except EndOfDataSet:
@@ -111,7 +111,7 @@ class IntervalDriver(driver.Driver, ABC):
                 interval_number_of_recipes += 1
                 # Count recipes
                 if prev_recipe_id != self.env.rec_count:
-                    interval_number_of_recipes +=1
+                    interval_number_of_recipes += 1
                     prev_recipe_id = self.env.rec_count
 
                 # # Apply the NE reward estimate
@@ -197,9 +197,12 @@ class IntervalDriverEval(IntervalDriver):
         # num_agents_per_recipe = 0
         num_episodes, total_return = 0, 0
         prev_recipe_id = None
-        while interval_number_of_recipes < self._interval_number_of_recipes:
+        actions = defaultdict(lambda: 0)
+        while interval_number_of_recipes <= self._interval_number_of_recipes:
             action_step = self.policy.action(time_step, policy_state)
             next_time_step = self.env.step(action_step.action)
+            actions[action_step.action.numpy()[0]] += 1  # Count the actions
+            self.env._episode_ended = False
             total_return += next_time_step.reward.numpy()
             if next_time_step.is_last().numpy():  # End of episode
                 self.env.reset()
@@ -209,7 +212,7 @@ class IntervalDriverEval(IntervalDriver):
                     interval_number_of_recipes += 1
                     prev_recipe_id = self.env.rec_count
 
-        return total_return / num_episodes, num_episodes
+        return total_return / num_episodes, num_episodes, actions
 
 
 def from_transition(time_step: ts.TimeStep,
