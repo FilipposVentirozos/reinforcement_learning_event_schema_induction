@@ -17,8 +17,15 @@ from dataset import DataSet
 from driver import IntervalDriver, IntervalDriverEval
 from tf_agents.utils import common
 
+print("Num GPUs Available: ", len(tf.config.list_physical_devices('GPU')))
+
+if tf.test.gpu_device_name():
+    print('Default GPU Device: {}'.format(tf.test.gpu_device_name()))
+else:
+    print("Please install GPU version of TF")
+
 # Hyper-Parameters
-num_iterations = 100  # @param {type:"integer"}
+num_iterations = 50  # @param {type:"integer"}
 
 initial_collect_steps = 100  # @param {type:"integer"}
 collect_steps_per_iteration = 1  # @param {type:"integer"}
@@ -29,7 +36,7 @@ learning_rate = 1e-3  # @param {type:"number"}
 log_interval = 200  # @param {type:"integer"}
 
 num_eval_recipes = 2  # @param {type:"integer"}
-eval_interval = 1000  # @param {type:"integer"}
+eval_interval = 10  # @param {type:"integer"}
 
 # Domain Specific Hyper-Parameters
 
@@ -110,7 +117,9 @@ actor_net = actor_distribution_network.ActorDistributionNetwork(
     env.action_spec(),
     fc_layer_params=(100,))
 
-optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate)
+# optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate)
+# tf.keras.optimizers.Adam(learning_rate=learning_rate)
+optimizer = tf.compat.v1.train.AdamOptimizer(learning_rate=0.0001)
 
 train_step_counter = tf.compat.v2.Variable(0)
 
@@ -166,6 +175,7 @@ avg_return = IntervalDriverEval(env=eval_env, policy=tf_agent.policy, rec_count=
 returns = [avg_return]
 
 for _ in range(num_iterations):
+    env.set_rec_count(-1)
     driver.run()
     # loss_info = agent.train(replay_buffer.gather_all())
     # experience = replay_buffer.as_dataset(single_deterministic_pass=True)

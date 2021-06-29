@@ -58,7 +58,8 @@ class SequenceTaggerEnv(PyEnvironment, ABC):
         # The three NEs and the option to stop the threadk, a tf.int8 produces an error is not supported
         # Also include the action of zero rule, means when all zero then make it to decide a -1
         # self._action_spec = BoundedTensorSpec(shape=(), dtype=tf.int32, minimum=0, maximum=4, name="action") # Maybe change to tf dtype
-        self._action_spec = BoundedTensorSpec(shape=(), dtype=tf.int32, minimum=-1, maximum=4, name="action")
+        # self._action_spec = BoundedTensorSpec(shape=(), dtype=tf.int32, minimum=-1, maximum=4, name="action")
+        self._action_spec = BoundedTensorSpec(shape=(), dtype=tf.int32, minimum=0, maximum=5, name="action")
         # Observation is the embedding of the NE, which is between 0 and 1
         # self._observation_spec = ArraySpec(shape=X_train.shape[0, 0, :], dtype=X_train.dtype, name="observation")
         # self._observation_spec = BoundedArraySpec(shape=X_train[0, 0, :].shape, minimum=0, maximum=1,
