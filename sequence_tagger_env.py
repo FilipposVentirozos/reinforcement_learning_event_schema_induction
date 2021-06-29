@@ -293,20 +293,16 @@ class SequenceTaggerEnv(PyEnvironment, ABC):
         try:
             logger.info("Recipe: " + str(self.rec_count) + " with id: " + str(self.id))
             self._state = tf.reshape(self.X_train[self.rec_count, self.id, :], self.obs_shape_)  # self.X_train[self.rec_count, self.id, :]
+            env_action = self.y_train[self.rec_count, prev_id].numpy()
             # self._state = self.X_train[self.rec_count, self.id, :]  # self.X_train[self.rec_count, self.id, :]
         # Due to being out of bounds
-        except (IndexError, tf.errors.InvalidArgumentError):  # ToDo Update Exception to TF
+        except (IndexError, tf.errors.InvalidArgumentError):
             self._state = self.empty_observation
-
-        # try:
-        try:
-            # The label of the previous state where the action was taken upon
-            env_action = self.y_train[self.rec_count, prev_id].numpy()
-        # Due to being out of bounds
-        except (IndexError,  tf.errors.InvalidArgumentError):
-            # env_action = 0
             env_action = -1
-        # Not an NE Reward
+        if prev_id < 0:
+            self._state = self.empty_observation
+            env_action = -1
+            # Not an NE Reward
         try:
             logger.info("selected: " + str(action.numpy()[0]))
             action = action.numpy()[0]
@@ -314,7 +310,9 @@ class SequenceTaggerEnv(PyEnvironment, ABC):
             logger.info("selected: " + str(action.numpy()))
             action = action.numpy()
         logger.info("true: " + str(env_action))
-        if action.astype(np.int8) == env_action:
+        if env_action == -1 and action == 5:
+            reward = self.ne_reward
+        elif action.astype(np.int8) == env_action:
             reward = self.ne_reward
         elif action == 4:  # The choice action to stop the episode
             if self.y_train[self.rec_count, self.seed].numpy() > 0:  # An NE
