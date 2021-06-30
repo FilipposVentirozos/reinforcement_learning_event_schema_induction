@@ -103,7 +103,8 @@ class IntervalDriver(driver.Driver, ABC):
 
             self._episode_buffer.add_batch(traj)
 
-            if traj.is_boundary():  # End of episode, evaluates the time_step not the next_time_step
+            # if traj.is_boundary():  # End of episode, evaluates the time_step not the next_time_step
+            if next_time_step.is_last().numpy():  # End of episode
                 try:
                     self.env.reset()
                 except EndOfDataSet:

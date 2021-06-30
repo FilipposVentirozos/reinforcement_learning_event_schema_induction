@@ -36,7 +36,7 @@ batch_size = 64  # @param {type:"integer"}
 learning_rate = 1e-3  # @param {type:"number"}
 log_interval = 200  # @param {type:"integer"}
 
-num_eval_recipes = 2  # @param {type:"integer"}
+num_eval_recipes = 1  # @param {type:"integer"}
 eval_interval = 20  # @param {type:"integer"}
 
 # Domain Specific Hyper-Parameters
@@ -163,7 +163,7 @@ replay_buffer = tf_uniform_replay_buffer.TFUniformReplayBuffer(
     batch_size=batch_size,
     max_length=replay_buffer_capacity)
 
-driver = IntervalDriver(env=env, policy=policy_, buffer_observer=replay_buffer, rec_count=-1)
+driver = IntervalDriver(env=env, policy=policy_, buffer_observer=replay_buffer, rec_count=3)
 
 # (Optional) Optimize by wrapping some of the code in a graph using TF function.
 tf_agent.train = common.function(tf_agent.train)
@@ -192,7 +192,7 @@ for _ in tqdm.tqdm(range(num_iterations)):
 
     # if step % eval_interval == 0:
     eval_env = sequence_tagger_env.SequenceTaggerEnv(dat.X, dat.label)
-    avg_return = IntervalDriverEval(env=eval_env, policy=tf_agent.policy, rec_count=-1,
+    avg_return = IntervalDriverEval(env=eval_env, policy=tf_agent.policy, rec_count=3,
                                     interval_number_of_recipes=num_eval_recipes).run()
     print('step = {0}: Average Return = {1}'.format(step, avg_return))
     returns.append(avg_return)

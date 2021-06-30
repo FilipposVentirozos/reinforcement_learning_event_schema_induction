@@ -404,3 +404,15 @@ Spacy I think does not have it's own pre-trained embeddings
 The reward goes to the previous step, that's why there is no reward in the first step
 Also when selecting to stop (termination via action 4) it stops in the next step
 Use the next_time_step.is_last().numpy() to end episode
+    - Done now test
+
+Ideas to maximise training
+    - Skip some Os episodes
+        - random, or similar
+    - Make policy where it knows to set 4 (to stop) when first token is O.
+    - Go to the next reward setting
+        - Every end of recipe calculate the convolution and reward episodes that are disagreeing
+
+
+
+

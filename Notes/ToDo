@@ -64,3 +64,10 @@ Fix agent or change
 Check trajs
 
 Check driver eval after
+checked
+
+check data
+    - Make profiling what takes so much time to get the data
+- saying no to the first token, I think first deliver the product of NER only
+    - Will be NER with TCA in RL, see also how one can use meta for optimising rewards
+
