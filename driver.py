@@ -25,6 +25,7 @@ import tensorflow as tf
 from sequence_tagger_env import EndOfDataSet
 from collections import defaultdict
 
+
 class IntervalDriver(driver.Driver, ABC):
     def __init__(
             self,
@@ -104,7 +105,8 @@ class IntervalDriver(driver.Driver, ABC):
             self._episode_buffer.add_batch(traj)
 
             # if traj.is_boundary():  # End of episode, evaluates the time_step not the next_time_step
-            if next_time_step.is_last().numpy():  # End of episode
+            if next_time_step.is_last().numpy():  # End of episode for the current decision, the above will go to
+                # the next step
                 try:
                     self.env.reset()
                 except EndOfDataSet:
@@ -206,7 +208,10 @@ class IntervalDriverEval(IntervalDriver):
             self.env._episode_ended = False
             total_return += next_time_step.reward.numpy()
             if next_time_step.is_last().numpy():  # End of episode
-                self.env.reset()
+                try:
+                    self.env.reset()
+                except EndOfDataSet:
+                    break
                 num_episodes += 1
                 # Count recipes
                 if prev_recipe_id != self.env.rec_count:

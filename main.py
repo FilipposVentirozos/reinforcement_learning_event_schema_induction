@@ -1,3 +1,5 @@
+import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # Logging verbosity from TF
 import tensorflow as tf
 from tf_agents.replay_buffers import py_uniform_replay_buffer, tf_uniform_replay_buffer
 from tf_agents.specs import tensor_spec
@@ -17,6 +19,7 @@ from dataset import DataSet
 from driver import IntervalDriver, IntervalDriverEval
 from tf_agents.utils import common
 import tqdm
+import time
 
 print("Num GPUs Available: ", len(tf.config.list_physical_devices('GPU')))
 
@@ -39,6 +42,8 @@ log_interval = 200  # @param {type:"integer"}
 num_eval_recipes = 1  # @param {type:"integer"}
 eval_interval = 20  # @param {type:"integer"}
 
+skipping_episode_prob = 0.99
+
 # Domain Specific Hyper-Parameters
 
 # Can be an integer or a lambda function. If lambda function then is the number of verbs of a recipe +/- the function
@@ -55,7 +60,7 @@ dat = DataSet()
 dat.fetch_from_path(dataset_path)
 
 # Environment
-env = sequence_tagger_env.SequenceTaggerEnv(dat.X, dat.label)
+env = sequence_tagger_env.SequenceTaggerEnv(dat.X, dat.label, skipping_episode_prob=skipping_episode_prob)
 
 # Initialise the Policy
 # policy_ = policy.Policy(env.action_spec(), policy="random")
@@ -172,11 +177,13 @@ tf_agent.train = common.function(tf_agent.train)
 tf_agent.train_step_counter.assign(0)
 
 # Evaluate the agent's policy once before training.
-eval_env = sequence_tagger_env.SequenceTaggerEnv(dat.X, dat.label)
+eval_env = sequence_tagger_env.SequenceTaggerEnv(dat.X, dat.label, skipping_episode_prob=skipping_episode_prob)
 avg_return = IntervalDriverEval(env=eval_env, policy=tf_agent.policy, rec_count=-1,
                                 interval_number_of_recipes=num_eval_recipes).run()
 returns = [avg_return]
-for _ in tqdm.tqdm(range(num_iterations)):
+for cnt in tqdm.tqdm(range(num_iterations)):
+    t = time.process_time()
+    # print("iteration" )
     env.set_rec_count(-1)
     replay_buffer.clear()
     driver.run()
@@ -191,11 +198,12 @@ for _ in tqdm.tqdm(range(num_iterations)):
         print('step = {0}: loss = {1}'.format(step, train_loss.loss))
 
     # if step % eval_interval == 0:
-    eval_env = sequence_tagger_env.SequenceTaggerEnv(dat.X, dat.label)
+    eval_env = sequence_tagger_env.SequenceTaggerEnv(dat.X, dat.label, skipping_episode_prob=skipping_episode_prob)
     avg_return = IntervalDriverEval(env=eval_env, policy=tf_agent.policy, rec_count=3,
                                     interval_number_of_recipes=num_eval_recipes).run()
     print('step = {0}: Average Return = {1}'.format(step, avg_return))
     returns.append(avg_return)
+    print(time.process_time() - t)
 
 for i in returns:
     print(i)

@@ -414,5 +414,19 @@ Ideas to maximise training
         - Every end of recipe calculate the convolution and reward episodes that are disagreeing
 
 
-
+Variations
+    - What if each step has a concatenation of the right and left neighbour
+    - What if each agent can output on how confident it is to label a word
+        - Then penalise each equivelantely to their confidence
+        - The final reward would be the weighted sum of the final outcome
+        - I guess if not using all agents the rest should have equal spacing (i.e. leave one token out or more but be consistent)
+        - The hypothesis is to reward agents who have covered more context for a word
+    - What if we navigate the opposite way, start from out and end to the word where we suppose to start from
+        - discount factor can be adjusted in the trajectory to give more importance to the last token
+            - Double check discount factor, may be zero it instead, check Bellman equation and different agents
+        - reward could be adjusted as well
+        - Is similar to MLM
+    - parameters will be
+        - number of spacing between agents
+        - token distance to start with
 

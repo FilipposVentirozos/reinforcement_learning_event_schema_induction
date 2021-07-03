@@ -68,6 +68,18 @@ checked
 
 check data
     - Make profiling what takes so much time to get the data
+    https://www.jetbrains.com/help/pycharm/profiler.html#start-profiling
 - saying no to the first token, I think first deliver the product of NER only
     - Will be NER with TCA in RL, see also how one can use meta for optimising rewards
 
+Which part of the code gives the out of bounds error, replace it
+    - done
+the profiling above & make sure devices are correct
+    - Done
+    - Check devices with WordNet
+    - Can I make it faster with GPU?
+review RL NER papers?
+    - yeah short one
+learn about agents and discount
+implement the above variations
+learn about NNs, which should I use for 768 datapoints?

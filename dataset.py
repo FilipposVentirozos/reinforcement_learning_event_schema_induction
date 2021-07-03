@@ -28,6 +28,12 @@ import os
 
 # os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 
+print("Num GPUs Available: ", len(tf.config.list_physical_devices('GPU')))
+
+if tf.test.gpu_device_name():
+    print('Default GPU Device: {}'.format(tf.test.gpu_device_name()))
+else:
+    print("Please install GPU version of TF")
 
 class LostAndFound(Exception):
     pass
@@ -310,6 +316,6 @@ class DataSet:
 if __name__ == '__main__':
     d = DataSet()
     d.create_dataset("/home/chroner/PhD_remote/RL_Event_Schema_Induction/data/raw/recipes_0_0.json",
-                     "/home/chroner/PhD_remote/RL_Event_Schema_Induction/data/processed/recipes_0_0_proc")
+                     "/home/chroner/PhD_remote/RL_Event_Schema_Induction/data/processed/test/recipes_0_0_proc")
     # for i in d.recipe_iter():
     #     print(i)
