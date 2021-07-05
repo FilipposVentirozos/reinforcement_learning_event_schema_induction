@@ -21,8 +21,8 @@ import torch
 import logging
 
 logger = logging.getLogger('embeddings')
-logger.addHandler(logging.StreamHandler())
-logger.setLevel(logging.INFO)
+# logger.addHandler(logging.StreamHandler())
+# logger.setLevel(logging.INFO)
 # logger.setLevel(logging.DEBUG)
 import os
 
@@ -34,6 +34,7 @@ if tf.test.gpu_device_name():
     print('Default GPU Device: {}'.format(tf.test.gpu_device_name()))
 else:
     print("Please install GPU version of TF")
+
 
 class LostAndFound(Exception):
     pass
@@ -80,6 +81,9 @@ class DataSet:
                 if key or ongoing:
                     try:
                         assert token.text == ingrs[token.idx]["span"]
+                        if mem:  # In the case that there is a false match later on
+                            ingr_counter_match += 1
+                            raise AssertionError
                     except (AssertionError, KeyError):
                         if not mem:
                             last_target_var = self.extract_ingr(ingrs[token.idx]["attr"])
@@ -108,10 +112,16 @@ class DataSet:
                 elif token.pos_ == "VERB":
                     target_var.append("verb")
                 elif token.pos_ == "NOUN":
-                    if DataSet.find_hypernym(token, tags=["kitchen_appliance", "utensil", "device", "equipment"]):
+                    print(token.text)
+                    if DataSet.find_hypernym(token, tags=["kitchen_appliance", "utensil", "device", "equipment",
+                                                          "paper", "cutlery", "eating_utensil", "vessel",
+                                                          "instrumentality", "dish", "pot", "hand tool",
+                                                          "white_goods"]):
                         target_var.append("device")
+                        # print("is device\n")
                     else:
                         target_var.append("O")
+                        # print("-\n")
                 else:
                     target_var.append("O")
             if counter + 1 > max_recipe_length:
@@ -133,7 +143,7 @@ class DataSet:
             _label, _ingr_label = DataSet.get_target_int(target_var)
             recipes_label.append(_label)
             recipes_ingr_label.append(_ingr_label)
-            if deubgger_counter == 5:
+            if deubgger_counter % 100:
                 # Save the X
                 # Make an array with all the length equal
                 template_shape = recipes_x[0][0].shape
@@ -165,7 +175,7 @@ class DataSet:
                 np.save(path_out + "_labels_ingrs", np.array(labs))
                 # To load
                 # np.load(path_out + "_labels_ingrs.npy")
-                sys.exit()
+                # sys.exit()
         pprint.pprint(self.ingr_class_dict)
         # Transform to numpy array
         print()
@@ -217,10 +227,11 @@ class DataSet:
     @staticmethod
     def find_hypernym(token, tags: list):
         # nltk.download('wordnet')
-        exclusions_food = {"contents", "C", "c", "mixture", "heat", "sprinkle", "pocket", "top", "mouth", "holes",
-                           "bite", "pieces", "edges", "tablespoons", "seconds", "side", "layers", "ounces", "sides",
-                           "broiler", "stem", "cup"}
-        if token.lemma_ in exclusions_food:
+        exclusions = {"contents", "C", "c", "mixture", "heat", "sprinkle", "pocket", "top", "mouth", "holes",
+                      "bite", "pieces", "edges", "tablespoons", "seconds", "side", "layers", "ounces", "sides",
+                      "broiler", "stem", "cup", "balls", "bit", "base", "rest", "ball", "square", "triangle",
+                      "liquor", "bottom", "souffle"}
+        if token.lemma_ in exclusions:
             return False
         for ss in wn.synsets(token.lemma_):
             try:
