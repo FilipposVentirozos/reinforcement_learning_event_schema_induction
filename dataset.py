@@ -112,7 +112,7 @@ class DataSet:
                 elif token.pos_ == "VERB":
                     target_var.append("verb")
                 elif token.pos_ == "NOUN":
-                    print(token.text)
+                    # print(token.text)
                     if DataSet.find_hypernym(token, tags=["kitchen_appliance", "utensil", "device", "equipment",
                                                           "paper", "cutlery", "eating_utensil", "vessel",
                                                           "instrumentality", "dish", "pot", "hand tool",

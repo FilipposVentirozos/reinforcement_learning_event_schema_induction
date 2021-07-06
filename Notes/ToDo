@@ -76,8 +76,10 @@ Which part of the code gives the out of bounds error, replace it
     - done
 the profiling above & make sure devices are correct
     - Done
-    - Check devices with WordNet
-    - Can I make it faster with GPU?
+    - Check devices with WordNet (done)
+    - Can I make it faster with GPU
+    - Failed at 300+, OOM
+
 review RL NER papers?
     - yeah short one
 learn about agents and discount

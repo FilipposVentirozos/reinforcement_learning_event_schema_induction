@@ -55,7 +55,7 @@ interval = 25
 
 
 # Get the Data
-dataset_path = "/home/chroner/PhD_remote/RL_Event_Schema_Induction/data/processed/recipes_0_0_proc"
+dataset_path = "/home/chroner/PhD_remote/RL_Event_Schema_Induction/data/processed/test/recipes_0_0_proc"
 dat = DataSet()
 dat.fetch_from_path(dataset_path)
 

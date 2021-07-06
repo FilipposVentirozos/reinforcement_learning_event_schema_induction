@@ -429,4 +429,14 @@ Variations
     - parameters will be
         - number of spacing between agents
         - token distance to start with
-
+    - (Deprecated) The previous using normal distribution to choose the next token to visit
+        - Not good since the path is not deterministic, will change in every round confusing the algoritm
+    - Inside-Out
+        - To address context
+        - Start with the token we want to find it's buddies (event lexical units), called the anchor
+        - start zig-zag from that without labelling
+        - When the end is reached then go opposite the zig-zag and label each word on whether belongs to the same event
+            - as the anchor
+        - Implement reward system by
+            - Giving positive and negative if selected a word, so then is True Positive or FP
+            - For every word not selected then give zero reward
