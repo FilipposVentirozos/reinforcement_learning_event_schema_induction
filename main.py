@@ -29,7 +29,7 @@ else:
     print("Please install GPU version of TF")
 
 # Hyper-Parameters
-num_iterations = 10  # @param {type:"integer"}
+num_iterations = 100  # @param {type:"integer"}
 
 initial_collect_steps = 100  # @param {type:"integer"}
 collect_steps_per_iteration = 1  # @param {type:"integer"}
@@ -39,10 +39,14 @@ batch_size = 64  # @param {type:"integer"}
 learning_rate = 1e-3  # @param {type:"number"}
 log_interval = 200  # @param {type:"integer"}
 
-num_eval_recipes = 1  # @param {type:"integer"}
-eval_interval = 20  # @param {type:"integer"}
+num_eval_recipes = 5  # @param {type:"integer"}
+eval_interval = 10  # @param {type:"integer"}
 
-skipping_episode_prob = 0.99
+skipping_episode_prob = 0
+skipping_episode_spacing = 2
+offset_neighbour = 5
+reverse = True
+
 
 # Domain Specific Hyper-Parameters
 
@@ -60,7 +64,11 @@ dat = DataSet()
 dat.fetch_from_path(dataset_path)
 
 # Environment
-env = sequence_tagger_env.SequenceTaggerEnv(dat.X, dat.label, skipping_episode_prob=skipping_episode_prob)
+env = sequence_tagger_env.SequenceTaggerEnv(dat.X, dat.label,
+                                            skipping_episode_prob=skipping_episode_prob,
+                                            skipping_episode_spacing=skipping_episode_spacing,
+                                            offset_neighbour=offset_neighbour,
+                                            reverse=reverse)
 
 # Initialise the Policy
 # policy_ = policy.Policy(env.action_spec(), policy="random")
@@ -168,7 +176,9 @@ replay_buffer = tf_uniform_replay_buffer.TFUniformReplayBuffer(
     batch_size=batch_size,
     max_length=replay_buffer_capacity)
 
-driver = IntervalDriver(env=env, policy=policy_, buffer_observer=replay_buffer, rec_count=3)
+driver = IntervalDriver(env=env, policy=policy_, buffer_observer=replay_buffer,
+                        interval_number_of_recipes=100,
+                        rec_count=-1)
 
 # (Optional) Optimize by wrapping some of the code in a graph using TF function.
 tf_agent.train = common.function(tf_agent.train)
@@ -177,8 +187,11 @@ tf_agent.train = common.function(tf_agent.train)
 tf_agent.train_step_counter.assign(0)
 
 # Evaluate the agent's policy once before training.
-eval_env = sequence_tagger_env.SequenceTaggerEnv(dat.X, dat.label, skipping_episode_prob=skipping_episode_prob)
-avg_return = IntervalDriverEval(env=eval_env, policy=tf_agent.policy, rec_count=-1,
+eval_env = sequence_tagger_env.SequenceTaggerEnv(dat.X, dat.label,
+                                                 offset_neighbour=offset_neighbour,
+                                                 reverse=reverse)
+
+avg_return = IntervalDriverEval(env=eval_env, policy=tf_agent.policy, rec_count=290,
                                 interval_number_of_recipes=num_eval_recipes).run()
 returns = [avg_return]
 for cnt in tqdm.tqdm(range(num_iterations)):
@@ -197,12 +210,14 @@ for cnt in tqdm.tqdm(range(num_iterations)):
     if step % log_interval == 0:
         print('step = {0}: loss = {1}'.format(step, train_loss.loss))
 
-    # if step % eval_interval == 0:
-    eval_env = sequence_tagger_env.SequenceTaggerEnv(dat.X, dat.label, skipping_episode_prob=skipping_episode_prob)
-    avg_return = IntervalDriverEval(env=eval_env, policy=tf_agent.policy, rec_count=3,
-                                    interval_number_of_recipes=num_eval_recipes).run()
-    print('step = {0}: Average Return = {1}'.format(step, avg_return))
-    returns.append(avg_return)
+    if step % eval_interval == 0:
+        eval_env = sequence_tagger_env.SequenceTaggerEnv(dat.X, dat.label,
+                                                         offset_neighbour=offset_neighbour,
+                                                         reverse=reverse)
+        avg_return = IntervalDriverEval(env=eval_env, policy=tf_agent.policy, rec_count=290,
+                                        interval_number_of_recipes=num_eval_recipes).run()
+        print('step = {0}: Average Return = {1}'.format(step, avg_return))
+        returns.append(avg_return)
     print(time.process_time() - t)
 
 for i in returns:
@@ -224,7 +239,4 @@ for i in returns:
 #         collect_step(env, policy, buffer)
 
 # collect_data(sequence_tagger_env.SequenceTaggerEnv, random_policy, replay_buffer, initial_collect_steps)
-
-
-
 

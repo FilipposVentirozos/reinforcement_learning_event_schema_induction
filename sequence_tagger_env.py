@@ -37,7 +37,8 @@ class SequenceTaggerEnv(PyEnvironment, ABC):
     """
 
     def __init__(self, X_train: np.ndarray, y_train: np.ndarray, ne_reward=50, non_ne_traj_mult=2,
-                 skipping_episode_prob=0.1):  # , per_rec: int
+                 skipping_episode_prob=0, skipping_episode_spacing=0, offset_neighbour=None, reverse=False):
+        # , per_rec: int
         """Initialization of environment with X_train and y_train.
 
         :param X_train: Features shaped: [samples, ..., ]
@@ -85,10 +86,15 @@ class SequenceTaggerEnv(PyEnvironment, ABC):
         self.empty_observation = tf.convert_to_tensor(np.zeros(shape=self.obs_shape_,
                                                                dtype=X_train.dtype),
                                                       dtype=tf.float32)
+        self.offset_neighbour = offset_neighbour  # If not specified will cover the full recipe,
+        # if not will start/finish from that offset
+        self.reverse = reverse  # Whether to traverse the tokens inside out or opposite
 
         # self._reward_spec = TensorSpec(shape=(), dtype=tf.float32, name='reward')
         self._episode_ended = False
-        self.skipping_episode_prob = skipping_episode_prob
+        # It's advisable to use one of the below methods
+        self.skipping_episode_prob = skipping_episode_prob  # The probability of skipping an episode
+        self.skipping_episode_spacing = skipping_episode_spacing  # Deterministically skip every n episodes (tokens)
 
         self.ne_reward = ne_reward
         self.non_ne_traj_mult = non_ne_traj_mult
@@ -182,28 +188,25 @@ class SequenceTaggerEnv(PyEnvironment, ABC):
         """
         logger.info("\nSet seed.")
         try:
-            self.seed += 1
+            self.seed = self.seed + 1 + self.skipping_episode_spacing
             if random.choices([True, False],
                               weights=[self.skipping_episode_prob, 1-self.skipping_episode_prob],
                               k=1)[0]:
                 self.seed += 1
                 logger.info("Seed skipped")
             logger.info("Seed is: " + str(self.seed))
-            self.id = self.seed
-            # try:
-            # except ValueError as e:
-            #     logger.error("Need to set a " + str(e))
-
             if self.seed >= self.recipe_length or not self.recipe_length:
                 return self.next_recipe()
-            logger.debug("Getting state in set_seed_sequential()")
-            self._state = tf.reshape(self.X_train[self.rec_count, self.id, :], self.obs_shape_)
-            # self._state = self.X_train[self.rec_count, self.id, :]
             # Re-initialise inside recipe counters
             self._maxed_increment = self.maxed_increment()  # Get the farthest away token for the end of episode
+            if self.reverse:
+                self.id = self._maxed_increment
+            else:
+                self.id = self.seed
+            logger.debug("Getting state in set_seed_sequential()")
+            self._state = tf.reshape(self.X_train[self.rec_count, self.id, :], self.obs_shape_)
             self.balance = 0
             self.increment = 0
-
             # if np.sum(self._state) == 0:  # Have exhausted the tokens on the current recipe, move to next recipe,
             #     # 0 would denote an empty cell
             #     self.next_recipe()
@@ -225,31 +228,41 @@ class SequenceTaggerEnv(PyEnvironment, ABC):
                 raise EndOfDataSet
                 # return self.next_recipe()
 
-    def set_id_zig_zag(self, reverse=False):
+    def set_id_zig_zag(self):
 
-        if self.balance == 0:
-            self.increment += 1
-            offset = self.increment
-            self.balance = self.increment
-        else:
-            offset = -self.increment
-            self.balance = 0
-        self.id = self.seed + offset
-        # End of possible trajectory, end of episode
-        if not reverse:
-            if self.id == self._maxed_increment:
+        if self.reverse:
+            if self.id < self.seed:
+                offset = self.seed - self.id
+                self.id = self.seed + offset
+            else:
+                offset = self.id - self.seed
+                self.id = self.seed - offset - 1
+            # End of possible trajectory, end of episode
+            if self.id == self.seed:
                 raise EndOfEpisode
         else:
-            if self.id == self.seed:
+            if self.balance == 0:
+                self.increment += 1
+                offset = self.increment
+                self.balance = self.increment
+            else:
+                offset = -self.increment
+                self.balance = 0
+            self.id = self.seed + offset
+            # End of possible trajectory, end of episode
+            if self.id == self._maxed_increment:
                 raise EndOfEpisode
 
     def maxed_increment(self):
         """ Return the index that is farthest from the seed id.
         Actually we return the index after that to count for the last action.
+        The more centered the seed token is the last runway it has in its trajectory.
 
         :return:
         """
         # max_token_index = self.recipe_length - 1
+        if self.offset_neighbour:
+            return self.seed - self.offset_neighbour
         if self.recipe_length - self.seed > self.seed:
             # According to zigzag that will be the next after the recipe max (recipe_length)
             return -self.recipe_length

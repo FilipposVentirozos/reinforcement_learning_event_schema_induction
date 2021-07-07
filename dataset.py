@@ -115,7 +115,7 @@ class DataSet:
                     # print(token.text)
                     if DataSet.find_hypernym(token, tags=["kitchen_appliance", "utensil", "device", "equipment",
                                                           "paper", "cutlery", "eating_utensil", "vessel",
-                                                          "instrumentality", "dish", "pot", "hand tool",
+                                                          "instrumentality", "dish", "pot", "hand_tool",
                                                           "white_goods"]):
                         target_var.append("device")
                         # print("is device\n")
