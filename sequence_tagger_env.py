@@ -236,7 +236,7 @@ class SequenceTaggerEnv(PyEnvironment, ABC):
                 self.id = self.seed + offset
             else:
                 offset = self.id - self.seed
-                self.id = self.seed - offset - 1
+                self.id = self.seed - offset + 1
             # End of possible trajectory, end of episode
             if self.id == self.seed:
                 raise EndOfEpisode

@@ -1,0 +1,43 @@
+
+
+ these two kinds of feedback
+are quite distinct: evaluative feedback depends entirely on the action taken, whereas
+instructive feedback is independent of the action taken
+	- I do isntructive feedback
+	- I think similarly is a multi-armed bandit problem
+
+
+If you knew the value of each action, then it would be trivial to solve the k-armed bandit problem:	
+	- I think similarly either for the NER or the ESI the value depends on the previous input
+
+Action value methods are used to predict the value of an action
+	- Could be the sum of previous rewards when taking that action
+Then is used to do either exploration or exploitation
+
+Each time learn each action, in my case depends on the context the state as well
+
+We have assoctiative search task, contextual bandits in my problem:
+	They are like the full reinforcement learning problem in that they involve learning a policy, but they
+	are also like our version of the k-armed bandit problem in that each action a↵ects only
+	the immediate reward. If actions are allowed to a↵ect the next situation as well as the
+	reward, then we have the full reinforcement learning problem. 
+	
+Beggining with optimistic values, instead of zero
+
+UCB (Upper Confidence Intervals)
+	For testing actions that haven't been tested
+
+MAB where previous actions influence the future actions
+	- How is the value function being calculated?
+	
+I think context has to be transparent not having to visit different states
+	The action value function with the context should be aware of all the context
+	
+What if we have a MAB with context of the output NER to do ESI
+	- we could have also some auxillary word/sentence embeddings as context
+	- The value function would be (S,A) instead of (A) like in typical MAB, since we want to learn a policy of S,A tuples 
+		- where S is the context (NER output +/- embeddings) 
+	- Would the context need to encompesate the future steps for the value calculation
+	
+	
+	

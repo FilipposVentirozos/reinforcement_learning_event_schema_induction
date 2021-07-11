@@ -82,6 +82,8 @@ the profiling above & make sure devices are correct
 
 review RL NER papers?
     - yeah short one
-learn about agents and discount
+    - check for trajectory type, mine is zig-zag
 implement the above variations
-learn about NNs, which should I use for 768 datapoints?
+learn:
+    - about NNs which should I use for 768 datapoints? different network types, activation functions etc
+    - learn about agents and discount

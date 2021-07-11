@@ -54,6 +54,7 @@ class IntervalDriver(driver.Driver, ABC):
         self._recipe_buffer_reset()  # Or have a list
         # Count the recipes to apply reward
         self.env.set_rec_count(rec_count)
+        self.rec_count = rec_count
 
     def _episode_buffer_reset(self):
         self._episode_buffer = self._buffer_template
@@ -74,11 +75,15 @@ class IntervalDriver(driver.Driver, ABC):
         :return:
         """
         # time_step = self.env.id  # This is the token ID in a recipe, gets zero after each recipe
+        # Re-initialise the environment's variables
+        self.env.set_rec_count(-1)
+        self.env.seed = -1
+        self.env.recipe_length = False
         time_step = self.env.reset()  # Check that
         policy_state = self.policy.get_initial_state(self.env.batch_size)
         interval_number_of_recipes = 0
         # num_agents_per_recipe = 0
-        prev_recipe_id = None
+        prev_recipe_id = self.rec_count
         while interval_number_of_recipes < self._interval_number_of_recipes:
             # Policy
             # [print(i.shape) for i in tf.nest.flatten(time_step)]
@@ -111,7 +116,6 @@ class IntervalDriver(driver.Driver, ABC):
                     self.env.reset()
                 except EndOfDataSet:
                     break
-                interval_number_of_recipes += 1
                 # Count recipes
                 if prev_recipe_id != self.env.rec_count:
                     interval_number_of_recipes += 1
@@ -157,7 +161,7 @@ class IntervalDriver(driver.Driver, ABC):
         # Calculate posterior rewards
         # self.event_sequence_reward()
 
-        return time_step, self._interval_number_of_recipes, policy_state
+        return time_step, policy_state, self._interval_number_of_recipes, self.env.rec_count
 
     @property
     def get_buffer_observer(self):

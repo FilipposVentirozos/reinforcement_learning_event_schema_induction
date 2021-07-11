@@ -421,6 +421,7 @@ Variations
         - The final reward would be the weighted sum of the final outcome
         - I guess if not using all agents the rest should have equal spacing (i.e. leave one token out or more but be consistent)
         - The hypothesis is to reward agents who have covered more context for a word
+        - I think this can be done with distribution actor network
     - What if we navigate the opposite way, start from out and end to the word where we suppose to start from
         - discount factor can be adjusted in the trajectory to give more importance to the last token
             - Double check discount factor, may be zero it instead, check Bellman equation and different agents
@@ -440,3 +441,8 @@ Variations
         - Implement reward system by
             - Giving positive and negative if selected a word, so then is True Positive or FP
             - For every word not selected then give zero reward
+
+Different type of networks in tf-agents
+    - https://colab.research.google.com/github/tensorflow/agents/blob/master/docs/tutorials/8_networks_tutorial.ipynb
+    - example usage
+        - https://github.com/adrianB3/ai_playground_trainer/blob/9d9bdde8108f665f6252cc132a9b30104396570f/ai_playground/selfdrive/networks.py

@@ -29,7 +29,7 @@ else:
     print("Please install GPU version of TF")
 
 # Hyper-Parameters
-num_iterations = 100  # @param {type:"integer"}
+num_iterations = 1_000  # @param {type:"integer"}
 
 initial_collect_steps = 100  # @param {type:"integer"}
 collect_steps_per_iteration = 1  # @param {type:"integer"}
@@ -39,8 +39,8 @@ batch_size = 64  # @param {type:"integer"}
 learning_rate = 1e-3  # @param {type:"number"}
 log_interval = 200  # @param {type:"integer"}
 
-num_eval_recipes = 5  # @param {type:"integer"}
-eval_interval = 10  # @param {type:"integer"}
+num_eval_recipes = 10  # @param {type:"integer"}
+eval_interval = 5  # @param {type:"integer"}
 
 skipping_episode_prob = 0
 skipping_episode_spacing = 2
@@ -129,8 +129,9 @@ env = sequence_tagger_env.SequenceTaggerEnv(dat.X, dat.label,
 
 actor_net = actor_distribution_network.ActorDistributionNetwork(
     env.observation_spec(),
-    env.action_spec(),
-    fc_layer_params=(100,))
+    env.action_spec())
+    # fc_layer_params=(100,))
+    # ?conv_layer_params=)
 
 # optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate)
 # tf.keras.optimizers.Adam(learning_rate=learning_rate)
@@ -162,7 +163,7 @@ policy_ = tf_agent.collect_policy
 # Replay buffer
 # Replay buffer, to store variables and train accordingly
 batch_size = 1  # 768
-replay_buffer_capacity = 2_000  #  * batch_size  # Cannot handle too big of capacity locally
+replay_buffer_capacity = 10_000  #  * batch_size  # Cannot handle too big of capacity locally # 2000
 # # Use agent's traj unit for the buffer
 # buffer_unit = (tf.TensorSpec([1], tf.bool, 'action'),  # Binary is 0 or 1
 #                (tf.TensorSpec([5], tf.float32, 'lidar'),
@@ -177,8 +178,8 @@ replay_buffer = tf_uniform_replay_buffer.TFUniformReplayBuffer(
     max_length=replay_buffer_capacity)
 
 driver = IntervalDriver(env=env, policy=policy_, buffer_observer=replay_buffer,
-                        interval_number_of_recipes=100,
-                        rec_count=-1)
+                        interval_number_of_recipes=290,
+                        rec_count=0)
 
 # (Optional) Optimize by wrapping some of the code in a graph using TF function.
 tf_agent.train = common.function(tf_agent.train)
@@ -193,17 +194,20 @@ eval_env = sequence_tagger_env.SequenceTaggerEnv(dat.X, dat.label,
 
 avg_return = IntervalDriverEval(env=eval_env, policy=tf_agent.policy, rec_count=290,
                                 interval_number_of_recipes=num_eval_recipes).run()
+# avg_return = 100
 returns = [avg_return]
+print('step = {0}: Average Return = {1}'.format(-1, avg_return))
 for cnt in tqdm.tqdm(range(num_iterations)):
     t = time.process_time()
     # print("iteration" )
-    env.set_rec_count(-1)
     replay_buffer.clear()
-    driver.run()
+    _, _, interval_number_of_recipes_, rec_count_ = driver.run()
+    print(interval_number_of_recipes_, rec_count_)
     # loss_info = agent.train(replay_buffer.gather_all())
 
     # experience = replay_buffer.as_dataset(single_deterministic_pass=True)
     experience = replay_buffer.gather_all()
+    # replay_buffer.as_dataset(num_steps=2).prefetch(3)
     train_loss = tf_agent.train(experience)
     # regret_values.append(regret_metric.result())
     step = tf_agent.train_step_counter.numpy()
