@@ -378,11 +378,11 @@ class SequenceTaggerEnv(PyEnvironment, ABC):
         #         # logger.info('\033[;41m   \033[0m')
         #         return ts.transition(self._state, reward=self.non_ne_traj_mult * (-self.ne_reward))
         if self._episode_ended:
-            return ts.termination(self._state, reward)
+            return ts.termination(observation=self._state, reward=reward, discount=0.0)
         else:
             # print(self._state)
             # print(reward)
-            return ts.transition(self._state, reward)
+            return ts.transition(observation=self._state, reward=reward, discount=0.0)
 
         # https://github.com/tensorflow/agents/blob/master/docs/tutorials/2_environments_tutorial.ipynb
         # if self._episode_ended or self._state >= 21:

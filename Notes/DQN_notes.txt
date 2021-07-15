@@ -446,3 +446,15 @@ Different type of networks in tf-agents
     - https://colab.research.google.com/github/tensorflow/agents/blob/master/docs/tutorials/8_networks_tutorial.ipynb
     - example usage
         - https://github.com/adrianB3/ai_playground_trainer/blob/9d9bdde8108f665f6252cc132a9b30104396570f/ai_playground/selfdrive/networks.py
+
+Seems interesting
+    - https://github.com/datamllab/rlcard
+    - and this paper for deep MC
+        - https://arxiv.org/abs/2106.06135
+
+I think the best case would be to have a model free learning agent and a modified model based learning where it computes the state with the previous selected ones
+    - https://en.wikipedia.org/wiki/Model-free_(reinforcement_learning)
+
+
+
+

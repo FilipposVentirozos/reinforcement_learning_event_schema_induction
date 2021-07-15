@@ -29,15 +29,46 @@ UCB (Upper Confidence Intervals)
 
 MAB where previous actions influence the future actions
 	- How is the value function being calculated?
-	
+
+We look into reward on the same state
+
+If gamma = 0, the agent is “myopic” in being concerned
+only with maximizing immediate rewards: its objective in this case is to learn how to choose At so as to maximize only Rt+1.
+    I think I need gamma to be zero
+It is simply about calculating the expected future rewards in a step
+
 I think context has to be transparent not having to visit different states
 	The action value function with the context should be aware of all the context
+
+The Bellman equation (3.14) averages over all the possibilities, weighting each
+by its probability of occurring.
+
+It states that the value of the start state must equal the
+(discounted) value of the expected next state, plus the reward expected along the way
+
+The DP is used to solve the bellman equation when everything is known
+Wheread Monte Carlo is used with estimates from averaging between episodes
+MC in blackjack have discount zero, similar to mine, cause it does not effect the latter stages
+    - An important fact about Monte Carlo methods is that the estimates for each state are independent.
+        - The estimate for one state does not build upon the estimate of any other state, as is the case in DP
+- exploring starts
+    - when exploring zero chance on state-action pair
+On-policy vs Off-policy
+    - On-policy methods attempt to evaluate or improve the policy that is used to make decisions,
+        whereas on-policy methods evaluate or improve a policy different from that used to generate the data.
+MC is model free learning
+
+It seems that RL calculates each S,A but we want S,A ... S_0,A_0
+What if the state has the information of the previous actions and states
+What if the policy not sees the discount of the future points but instead the actions and states selected previously?
 	
 What if we have a MAB with context of the output NER to do ESI
 	- we could have also some auxillary word/sentence embeddings as context
 	- The value function would be (S,A) instead of (A) like in typical MAB, since we want to learn a policy of S,A tuples 
 		- where S is the context (NER output +/- embeddings) 
 	- Would the context need to encompesate the future steps for the value calculation
+
+Would I need to run a trajectory many times in order to test all the different actions
 	
 	
 	
