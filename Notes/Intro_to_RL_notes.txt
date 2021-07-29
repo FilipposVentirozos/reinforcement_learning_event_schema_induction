@@ -69,6 +69,10 @@ What if we have a MAB with context of the output NER to do ESI
 	- Would the context need to encompesate the future steps for the value calculation
 
 Would I need to run a trajectory many times in order to test all the different actions
-	
+
+
+Reinforce
+    - g predicts from unit and input
+    - b_{i,j} reinforcement baseline conditionally independent of y_i
 	
 	

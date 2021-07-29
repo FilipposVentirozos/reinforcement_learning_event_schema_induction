@@ -456,5 +456,8 @@ I think the best case would be to have a model free learning agent and a modifie
     - https://en.wikipedia.org/wiki/Model-free_(reinforcement_learning)
 
 
-
-
+with fc =100 in step 75 it changed the network
+fc_layer_params=(100,))
+ 18%|█▊        | 184/1000 [29:03:42<122:52:07, 542.07s/it]250 250
+Process finished with exit code 137 (interrupted by signal 9: SIGKILL)
+    - Probably run out of memory

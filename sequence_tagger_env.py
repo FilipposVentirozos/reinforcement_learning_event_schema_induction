@@ -378,7 +378,7 @@ class SequenceTaggerEnv(PyEnvironment, ABC):
         #         # logger.info('\033[;41m   \033[0m')
         #         return ts.transition(self._state, reward=self.non_ne_traj_mult * (-self.ne_reward))
         if self._episode_ended:
-            return ts.termination(observation=self._state, reward=reward, discount=0.0)
+            return ts.termination(observation=self._state, reward=reward)
         else:
             # print(self._state)
             # print(reward)

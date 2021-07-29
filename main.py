@@ -9,7 +9,7 @@ from tf_agents.agents.ppo.ppo_agent import PPOAgent
 from tf_agents.agents.dqn import dqn_agent
 from tf_agents.policies import random_py_policy, random_tf_policy
 from tf_agents.environments import suite_gym
-from tf_agents.networks import actor_distribution_network
+from tf_agents.networks import actor_distribution_network, actor_distribution_rnn_network
 from tf_agents.agents.reinforce import reinforce_agent
 # Local
 from archive import embeddings
@@ -20,6 +20,7 @@ from driver import IntervalDriver, IntervalDriverEval
 from tf_agents.utils import common
 import tqdm
 import time
+from configs import dataset_path
 
 print("Num GPUs Available: ", len(tf.config.list_physical_devices('GPU')))
 
@@ -39,7 +40,7 @@ batch_size = 64  # @param {type:"integer"}
 learning_rate = 1e-3  # @param {type:"number"}
 log_interval = 200  # @param {type:"integer"}
 
-num_eval_recipes = 10  # @param {type:"integer"}
+num_eval_recipes = 50  # @param {type:"integer"}
 eval_interval = 5  # @param {type:"integer"}
 
 skipping_episode_prob = 0
@@ -47,6 +48,7 @@ skipping_episode_spacing = 2
 offset_neighbour = 5
 reverse = True
 
+cutoff_data = 250
 
 # Domain Specific Hyper-Parameters
 
@@ -59,7 +61,6 @@ interval = 25
 
 
 # Get the Data
-dataset_path = "/home/chroner/PhD_remote/RL_Event_Schema_Induction/data/processed/test/recipes_0_0_proc"
 dat = DataSet()
 dat.fetch_from_path(dataset_path)
 
@@ -127,11 +128,22 @@ env = sequence_tagger_env.SequenceTaggerEnv(dat.X, dat.label,
 #
 # agent.initialize()
 
+
+
 actor_net = actor_distribution_network.ActorDistributionNetwork(
     env.observation_spec(),
-    env.action_spec())
-    # fc_layer_params=(100,))
+    env.action_spec(),
+    fc_layer_params=(100,))
+
     # ?conv_layer_params=)
+
+# actor_net = actor_distribution_rnn_network.ActorDistributionRnnNetwork(
+#     env.observation_spec(),
+#     env.action_spec(),
+#     # input_fc_layer_params=(256, ),
+#     lstm_size=(100, ),
+#     # output_fc_layer_params=(256, ),
+# )
 
 # optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate)
 # tf.keras.optimizers.Adam(learning_rate=learning_rate)
@@ -145,7 +157,10 @@ tf_agent = reinforce_agent.ReinforceAgent(
     actor_network=actor_net,
     optimizer=optimizer,
     normalize_returns=True,
-    train_step_counter=train_step_counter)
+    train_step_counter=train_step_counter,
+    gamma=0,
+    debug_summaries=True,
+    summarize_grads_and_vars=True)
 tf_agent.initialize()
 
 policy_ = tf_agent.collect_policy
@@ -178,7 +193,7 @@ replay_buffer = tf_uniform_replay_buffer.TFUniformReplayBuffer(
     max_length=replay_buffer_capacity)
 
 driver = IntervalDriver(env=env, policy=policy_, buffer_observer=replay_buffer,
-                        interval_number_of_recipes=290,
+                        interval_number_of_recipes=cutoff_data,
                         rec_count=0)
 
 # (Optional) Optimize by wrapping some of the code in a graph using TF function.
@@ -192,9 +207,9 @@ eval_env = sequence_tagger_env.SequenceTaggerEnv(dat.X, dat.label,
                                                  offset_neighbour=offset_neighbour,
                                                  reverse=reverse)
 
-avg_return = IntervalDriverEval(env=eval_env, policy=tf_agent.policy, rec_count=290,
-                                interval_number_of_recipes=num_eval_recipes).run()
-# avg_return = 100
+# avg_return = IntervalDriverEval(env=eval_env, policy=tf_agent.policy, rec_count=cutoff_data,
+#                                 interval_number_of_recipes=num_eval_recipes).run()
+avg_return = 100
 returns = [avg_return]
 print('step = {0}: Average Return = {1}'.format(-1, avg_return))
 for cnt in tqdm.tqdm(range(num_iterations)):
@@ -218,7 +233,7 @@ for cnt in tqdm.tqdm(range(num_iterations)):
         eval_env = sequence_tagger_env.SequenceTaggerEnv(dat.X, dat.label,
                                                          offset_neighbour=offset_neighbour,
                                                          reverse=reverse)
-        avg_return = IntervalDriverEval(env=eval_env, policy=tf_agent.policy, rec_count=290,
+        avg_return = IntervalDriverEval(env=eval_env, policy=tf_agent.policy, rec_count=cutoff_data,
                                         interval_number_of_recipes=num_eval_recipes).run()
         print('step = {0}: Average Return = {1}'.format(step, avg_return))
         returns.append(avg_return)
