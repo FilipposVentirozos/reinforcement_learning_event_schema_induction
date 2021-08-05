@@ -75,4 +75,16 @@ Reinforce
     - g predicts from unit and input
     - b_{i,j} reinforcement baseline conditionally independent of y_i
 	
-	
+Temporal Difference:
+    - combines the advantage of DP and MC
+    - samples like MC but calculates with the reward of the next step to reward
+        - Counts on the fact of pairs instead of waiting to terminate the episode like MC
+    - See example 6.4 pg 127 where MC is better, similar to my thing
+        - certainty-equivalence estimate, TD methods may be the only feasible way of approximating the certainty-equivalence solution.
+    - pg. 130 - see Policy Sarsa
+        - computes if an state is good with the action taken and with the greedy policy the reward of the next state, action
+    - Then has Q-learning similar thing but offline, no matter the policy will take the maximum estimated value
+    - Expected Sarsa
+        - like Sarsa but uses the expetected next step state, action, reward (more computationally heavy)
+6.7 Maximization Bias and Double Learning
+    - what if the underlying reward change then confuse the positive bias of Sarsa, applies to Q learning and the rest

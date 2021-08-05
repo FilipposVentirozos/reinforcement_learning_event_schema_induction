@@ -2,5 +2,6 @@
 .idea
 /data/raw
 /data/processed
+/data/external
 /__pycache__
 *.pyc

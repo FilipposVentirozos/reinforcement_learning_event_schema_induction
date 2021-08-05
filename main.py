@@ -1,5 +1,5 @@
 import os
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # Logging verbosity from TF
+# os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # Logging verbosity from TF
 import tensorflow as tf
 from tf_agents.replay_buffers import py_uniform_replay_buffer, tf_uniform_replay_buffer
 from tf_agents.specs import tensor_spec
@@ -15,7 +15,8 @@ from tf_agents.agents.reinforce import reinforce_agent
 from archive import embeddings
 # import policy
 import sequence_tagger_env
-from dataset import DataSet
+# from dataset_bert import DataSet
+from dataset_glove import DataSet
 from driver import IntervalDriver, IntervalDriverEval
 from tf_agents.utils import common
 import tqdm
@@ -130,20 +131,24 @@ env = sequence_tagger_env.SequenceTaggerEnv(dat.X, dat.label,
 
 
 
-actor_net = actor_distribution_network.ActorDistributionNetwork(
-    env.observation_spec(),
-    env.action_spec(),
-    fc_layer_params=(100,))
+# actor_net = actor_distribution_network.ActorDistributionNetwork(
+#     env.observation_spec(),
+#     env.action_spec(),
+#     fc_layer_params=(100,))
 
     # ?conv_layer_params=)
 
-# actor_net = actor_distribution_rnn_network.ActorDistributionRnnNetwork(
-#     env.observation_spec(),
-#     env.action_spec(),
-#     # input_fc_layer_params=(256, ),
-#     lstm_size=(100, ),
-#     # output_fc_layer_params=(256, ),
-# )
+actor_net = actor_distribution_rnn_network.ActorDistributionRnnNetwork(
+    env.observation_spec(),
+    env.action_spec(),
+    # input_fc_layer_params=(256, ),
+    lstm_size=(100,),
+    # output_fc_layer_params=(256, ),
+#     input_fc_layer_params=(256,),
+#     lstm_size=(256,),
+#     output_fc_layer_params=(128,),
+#     activation_fn=tf.nn.elu,
+)
 
 # optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate)
 # tf.keras.optimizers.Adam(learning_rate=learning_rate)
