@@ -1,0 +1,27 @@
+event representation
+    - have a distance between each NE (verb, ingr) of the predicted and target event
+        - Count the distances
+    -  Can use simple Glove Embeddings on the hypernyms
+        - take lemma of each NE
+    - How to combine mulitple NEs of the same type
+        - Use some custom heuristics for starters
+            - the common hypernym, or average of tw
+    - What it we use some sort of clustering techinque to cut down the amount of unique words
+        - Probably a distane based clustering techinque
+    - Need to have a function to calculate the event average position
+    - Use VAE to generate also for each type, nested type
+        - Or could be to bring the threshold to a level where if it's above that then include those
+        - Could apply also some common sense rules when generating NEs
+    - Encoding and then feeding to whatever sequence learner
+        - Can easily encode different types
+        - Have the risk of runing into too many different types making it not enough data to produce
+            - A workaround could be to cluster the NEs
+                - Cluster each NE type
+                    - To cluster ingrs
+                        - First find the average of each embedding ingr group (based on labels)
+                        - Then cluster
+            - For multiple NEs
+                - Do one pass after the training and identify the common events which have at least 2, 3 (apriori algorithm)
+                - Encode the events with the most possible matches
+            - N-grams of NEs
+                - take the average I guess
