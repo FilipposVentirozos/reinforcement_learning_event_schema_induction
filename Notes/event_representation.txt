@@ -25,3 +25,23 @@ event representation
                 - Encode the events with the most possible matches
             - N-grams of NEs
                 - take the average I guess
+
+
+
+
+## Process 1
+Teach an RL to measure how events differ based on the Semantic role labels used and the Named entities, the graph as well.
+Steps:
+1) Have to mine the data examples to find the event structures, the labelled instances
+2) Distances between events can be set in the manner on how the recipes differ and to what step of the process they occur.
+3) Learn how to weigh the distances between events
+4) Learn event sequence probability
+
+## Process 2
+Take the event and represent it as graph and take into account the word embeddings used.
+Then find
+Steps:
+1) RL to find which words match together to form an event based on a series of rewards
+  a) Have a predictor to advise the reward on how probable is to form an event from Process 1
+2) Learn event sequences
+3) Update and evaluate the sequence model
