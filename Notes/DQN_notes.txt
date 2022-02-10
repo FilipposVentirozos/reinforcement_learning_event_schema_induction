@@ -439,3 +439,10 @@ It shows again segmenation core dumped, I think it's from memory issues
  I tried to do the GloVe but fails in main
   - will have more datapoints
     - Try a simple NER dataset
+
+
+Maybe have verbs only as the seed words, then each agent will start from out to in.
+Also classify the relation to it (Ingr, Tool, Condition) driven by the Ricoreca what are the most frequent NEs and REs.
+The coref could be done later.
+
+

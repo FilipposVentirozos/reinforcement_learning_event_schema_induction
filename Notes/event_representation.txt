@@ -3,18 +3,18 @@ event representation
         - Count the distances
     -  Can use simple Glove Embeddings on the hypernyms
         - take lemma of each NE
-    - How to combine mulitple NEs of the same type
+    - How to combine multiple NEs of the same type
         - Use some custom heuristics for starters
             - the common hypernym, or average of tw
-    - What it we use some sort of clustering techinque to cut down the amount of unique words
-        - Probably a distane based clustering techinque
+    - What it we use some sort of clustering technique to cut down the amount of unique words
+        - Probably a distance based clustering technique
     - Need to have a function to calculate the event average position
     - Use VAE to generate also for each type, nested type
         - Or could be to bring the threshold to a level where if it's above that then include those
         - Could apply also some common sense rules when generating NEs
     - Encoding and then feeding to whatever sequence learner
         - Can easily encode different types
-        - Have the risk of runing into too many different types making it not enough data to produce
+        - Have the risk of running into too many different types making it not enough data to produce
             - A workaround could be to cluster the NEs
                 - Cluster each NE type
                     - To cluster ingrs
