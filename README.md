@@ -1,4 +1,4 @@
-# rl_event_schema_induction
+# Reinforcement Learning for Event Schema Induction
 Work in reinforcement learning under process.
 
 The project aims to use Reiforcement Learning (RL) for event schema induction. 
